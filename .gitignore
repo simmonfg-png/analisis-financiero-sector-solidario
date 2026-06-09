@@ -3,10 +3,12 @@ __pycache__/
 venv/
 .venv/
 .env
+# Excel originales (incluye el de 95 MB): no se versionan
+data/raw/
 data/**/*.xlsx
 data/**/*.xls
 data/**/*.csv
-data/**/*.parquet
-data/processed/
+# Los parquet procesados (livianos, ~1 MB) SÍ se versionan para que la app
+# desplegada en la nube tenga datos. Son datos públicos de la Supersolidaria.
 .streamlit/secrets.toml
 .pytest_cache/
