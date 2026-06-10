@@ -83,27 +83,46 @@ Van en `data/raw/` (no se versionan; el ETL los procesa). Son **datos públicos*
 Activos **$61.8 B** · Pasivos $38.8 B · Patrimonio **$23.0 B** ·
 Asociados **7.03 M** · Entidades 1.467. Mayor entidad: Coomeva ($6.5 B).
 
-## 6. Cómo actualizar
+## 6. Despliegue (servidor Hetzner)
 
-- **Cambio de código:** editar → `git push` → CI corre tests → Streamlit Cloud (si está desplegado) redepliega solo.
-- **Datos de un mes nuevo:** poner los Excel en `data/raw/` → `python -m src.etl`
-  (regenera los parquet) → `git add data/processed && git commit && git push`.
+La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
+4 GB RAM; la IP no se documenta aquí por ser repo público — el usuario la conoce).
 
-## 7. Estado actual / pendientes
+- Ruta en el servidor: `/opt/sector-solidario` (clon del repo de GitHub).
+- Entorno: `venv` propio (`/opt/sector-solidario/venv`).
+- Servicio systemd: **`sector_solidario.service`** → puerto **8502**
+  (`--server.address 0.0.0.0`), arranque automático y `Restart=always`.
+- Convive con otro proyecto Streamlit del usuario: `analisis_tasas.service`
+  en el puerto 8501 (no tocar). Sin Docker, sin nginx, sin firewall de Hetzner.
+- Acceso: `http://IP_DEL_SERVIDOR:8502` (HTTP sin dominio/HTTPS por ahora).
+- Comandos útiles en el servidor:
+  `systemctl status|restart sector_solidario` · logs: `journalctl -u sector_solidario -f`.
+
+## 7. Cómo actualizar
+
+- **Cambio de código:** editar → `git push` (CI corre tests) → en el servidor:
+  `cd /opt/sector-solidario && git pull && systemctl restart sector_solidario`.
+- **Datos de un mes nuevo:** poner los Excel en `data/raw/` local → `python -m src.etl`
+  (regenera los parquet) → `git add data/processed && git commit && git push` →
+  mismo `git pull` + restart en el servidor.
+- Si cambian las dependencias: además `./venv/bin/pip install -r requirements.txt`.
+
+## 8. Estado actual / pendientes
 
 - [x] ETL consolidando los 6 reportes.
 - [x] App multi-página (5 páginas) verificada con capturas reales.
 - [x] Tests (9) en verde, local y en CI.
 - [x] Repo público en GitHub + GitHub Actions.
 - [x] Parquet procesados versionados (para despliegue en la nube).
-- [ ] **Despliegue en Streamlit Community Cloud** — pendiente de que el usuario
-      conecte el repo en https://share.streamlit.io (Repo + branch `main` +
-      main file `app.py`).
+- [x] **Desplegada en el servidor Hetzner** (systemd, puerto 8502). Se descartó
+      Streamlit Community Cloud en favor del servidor propio.
+- [ ] (Idea futura) Dominio + HTTPS (p. ej. con Caddy) para ambas apps del servidor.
+- [ ] (Idea futura) Auto-deploy: webhook o cron que haga `git pull` en el servidor.
 - [ ] (Idea futura) Integrar el detalle a 6 dígitos en el Explorador.
 - [ ] (Idea futura) Mapa coroplético por departamento; página de alertas; export PDF.
 - [ ] (Idea futura) Actualización automática de datos vía Action programada.
 
-## 8. Convenciones
+## 9. Convenciones
 
 - Todo en español (UI, comentarios, mensajes de commit).
 - Cifras COP compactas: **B** = billones (10¹²), **mM** = miles de millones, **M** = millones.
@@ -112,10 +131,14 @@ Asociados **7.03 M** · Entidades 1.467. Mayor entidad: Coomeva ($6.5 B).
 
 ---
 
-## 9. Bitácora de cambios
+## 10. Bitácora de cambios
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-10** — **Despliegue en Hetzner:** se clona el repo en
+  `/opt/sector-solidario`, venv + requirements, y servicio systemd
+  `sector_solidario.service` en el puerto 8502 (enabled + Restart=always).
+  Convive con `analisis_tasas.service` (8501). Acceso por `http://IP:8502`.
 - **2026-06-09** — Se crea este `CLAUDE.md` como memoria del proyecto.
 - **2026-06-09** — Datos: se versionan los parquet procesados (~1.2 MB) en
   `data/processed/` para el despliegue en la nube; los Excel crudos siguen ignorados.
