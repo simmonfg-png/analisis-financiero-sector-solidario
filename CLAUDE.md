@@ -131,7 +131,12 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 - [x] Parquet procesados versionados (para despliegue en la nube).
 - [x] **Desplegada en el servidor Hetzner** (systemd, puerto 8502). Se descartó
       Streamlit Community Cloud en favor del servidor propio.
-- [ ] (Idea futura) Dominio + HTTPS (p. ej. con Caddy) para ambas apps del servidor.
+- [ ] **Dominio + HTTPS** — pospuesto hasta que el usuario defina el dominio.
+      Plan acordado: Caddy como proxy en 80/443 (certificado automático) →
+      `localhost:8502` (y opcionalmente el 8501 del otro proyecto). Puertos
+      80/443 libres en el servidor. Opciones de dominio discutidas: comprar
+      uno (~USD 10/año), usar uno existente, DuckDNS (gratis) o sslip.io
+      (gratis, sin registro).
 - [x] **Auto-deploy por webhook** (push a `main` → deploy automático).
 - [ ] (Idea futura) Integrar el detalle a 6 dígitos en el Explorador.
 - [ ] (Idea futura) Mapa coroplético por departamento; página de alertas; export PDF.
