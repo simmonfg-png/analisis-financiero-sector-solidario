@@ -9,6 +9,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from src import agrupaciones as ag
+
 # Códigos de cuentas principales usados en los indicadores
 A = "100000"   # Activo
 P = "200000"   # Pasivo
@@ -39,6 +41,71 @@ def agregar_indicadores(df: pd.DataFrame) -> pd.DataFrame:
     d["EFICIENCIA"] = _ratio(d[GADM], d[ING])
     d["ROE"] = _ratio(d[EXC], d[PAT])
     return d
+
+
+def indicadores_6dig(saldos: pd.DataFrame) -> pd.DataFrame:
+    """
+    Indicadores calculados con el catálogo de agrupaciones (cuentas a 6 dígitos),
+    portados del proyecto analisis_tasas. Recibe el DataFrame ancho de
+    saldos_6dig.parquet (una fila por entidad, una columna por código PUC) y
+    devuelve CODIGO ENTIDAD + columnas de indicadores (en %).
+    """
+    def A(alias: str) -> pd.Series:
+        return ag.calcular_df(alias, saldos)
+
+    cb    = A("CARTERA_BRUTA")
+    ci    = A("CARTERA_INTEGRAL")
+    ri    = A("CARTERA_EN_RIESGO")
+    act   = A("ACTIVOS")
+    ing   = A("INGRESOS_TOTAL")
+    inti  = A("INGRESOS_CARTERA")
+    recup = A("RECUPERACIONES")
+    gadm  = A("GASTOS_ADMINISTRACION")
+    cfin  = A("COSTOS_FINANCIEROS")
+    csoc  = A("CAPITAL_SOCIAL")
+    ef_den = inti + recup
+
+    out = pd.DataFrame({"CODIGO ENTIDAD": saldos["CODIGO ENTIDAD"].astype(int)})
+
+    # Calidad y cobertura de cartera
+    out["CALIDAD_RIESGO"]    = _ratio(ri, ci)
+    out["COBERTURA_RIESGO"]  = _ratio(A("PROVISIONES_TOTAL"), ri)
+    out["COBERTURA_GENERAL"] = _ratio(
+        A("PROVISIONES_INDIVIDUALES_CAPITAL") + A("PROVISIONES_GENERALES"), cb)
+    out["CARTERA_PRODUCTIVA"] = _ratio(A("CARTERA_PRODUCTIVA_AB"), cb)
+
+    # Mezcla de cartera por modalidad
+    out["PCT_VIVIENDA"]   = _ratio(A("CARTERA_BRUTA_VIVIENDA"), cb)
+    out["PCT_CONSUMO"]    = _ratio(A("CARTERA_BRUTA_CONSUMO_LIBRANZA")
+                                   + A("CARTERA_BRUTA_CONSUMO_CAJA"), cb)
+    out["PCT_MICROCREDITO"] = _ratio(A("CARTERA_BRUTA_MICROCREDITO"), cb)
+    out["PCT_COMERCIAL"]  = _ratio(A("CARTERA_BRUTA_COMERCIAL"), cb)
+    out["PCT_PRODUCTIVO"] = _ratio(A("CARTERA_BRUTA_PRODUCTIVO")
+                                   + A("CARTERA_BRUTA_EMPLEADOS"), cb)
+
+    # Fondeo y estructura
+    out["FONDEO_DEP_CARTERA"] = _ratio(A("DEPOSITOS_NETOS"), cb)
+    out["FONDEO_APORTES"]     = _ratio(A("APORTES_SOCIALES_ASOCIADOS"), cb)
+    out["DEUDA_ACTIVOS"]      = _ratio(A("OBLIGACIONES_FINANCIERAS"), act)
+    out["ACTIVOS_IMPRODUCTIVOS"] = _ratio(A("ACTIVO_IMPRODUCTIVO"), act)
+
+    # Capital
+    out["CAPITAL_INSTITUCIONAL"] = _ratio(A("CAPITAL_INSTITUCIONAL"), act)
+    out["IRREDUCIBLE_SOCIAL"]    = _ratio(A("CAPITAL_IRREDUCIBLE"), csoc)
+
+    # Eficiencia y márgenes (estado de resultados)
+    out["EFICIENCIA_OPERATIVA"] = _ratio(gadm + cfin, ef_den)
+    out["MARGEN_FINANCIERO"]    = _ratio(inti - cfin, inti)
+    out["MARGEN_OPERACIONAL"]   = _ratio(inti + recup - cfin - gadm, inti)
+    out["DIVERSIFICACION"]      = _ratio(ing - inti - recup, ing)
+    out["DEPENDENCIA_MARGEN"]   = _ratio(ef_den, ing)
+
+    return out
+
+
+def agregar_indicadores_6dig(df: pd.DataFrame, saldos: pd.DataFrame) -> pd.DataFrame:
+    """Cruza el DataFrame de entidades con los indicadores a 6 dígitos."""
+    return df.merge(indicadores_6dig(saldos), on="CODIGO ENTIDAD", how="left")
 
 
 def resumen_sector(df: pd.DataFrame) -> dict:

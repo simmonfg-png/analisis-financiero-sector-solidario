@@ -21,10 +21,35 @@ INDICADORES = [
     ("EFICIENCIA", "Carga administrativa", "Gastos admón. / Ingresos"),
 ]
 
+# Indicadores calculados con el plan de cuentas a 6 dígitos (catálogo de
+# agrupaciones portado de analisis_tasas). Aplican sobre todo a entidades
+# con actividad de crédito; en las demás salen vacíos.
+INDICADORES_6DIG = [
+    ("CALIDAD_RIESGO", "Calidad por riesgo", "Cartera en riesgo (B-E) / cartera total"),
+    ("CARTERA_PRODUCTIVA", "Cartera productiva (A+B)", "Cartera en categorías A y B / cartera bruta"),
+    ("COBERTURA_RIESGO", "Cobertura por riesgo", "Provisiones totales / cartera en riesgo"),
+    ("COBERTURA_GENERAL", "Cobertura general", "Provisiones (capital + general) / cartera bruta"),
+    ("FONDEO_DEP_CARTERA", "Fondeo depósitos / cartera", "Depósitos sin intereses / cartera bruta"),
+    ("FONDEO_APORTES", "Fondeo aportes / cartera", "Aportes sociales netos / cartera bruta"),
+    ("CAPITAL_INSTITUCIONAL", "Capital institucional", "Reservas, fondos y donaciones / activo"),
+    ("ACTIVOS_IMPRODUCTIVOS", "Activos improductivos", "Activos que no generan rendimiento / activo"),
+    ("EFICIENCIA_OPERATIVA", "Eficiencia operativa", "(Gastos admón. + costos financieros) / (ingresos de cartera + recuperaciones)"),
+    ("MARGEN_FINANCIERO", "Margen financiero", "(Ingresos de cartera − costos financieros) / ingresos de cartera"),
+    ("MARGEN_OPERACIONAL", "Margen operacional", "(Ing. cartera + recuperaciones − costos − admón.) / ingresos de cartera"),
+    ("DIVERSIFICACION", "Diversificación de ingresos", "Ingresos no financieros / ingresos totales"),
+]
+
+MODALIDADES = [
+    ("PCT_VIVIENDA", "Vivienda"), ("PCT_CONSUMO", "Consumo"),
+    ("PCT_MICROCREDITO", "Microcrédito"), ("PCT_COMERCIAL", "Comercial"),
+    ("PCT_PRODUCTIVO", "Productivo y otros"),
+]
+
 
 def render():
     st.header("🔍 Explorador de entidades")
     df = an.agregar_indicadores(data.entidades())
+    df = an.agregar_indicadores_6dig(df, data.saldos_6dig())
 
     nombres = df["ENTIDAD"] + "  (" + df["SIGLA"].fillna("") + ")"
     idx = st.selectbox("Selecciona una entidad", range(len(df)),
@@ -66,6 +91,36 @@ def render():
             help=f"{dict((c, h) for c, _, h in INDICADORES)[code]} · "
                  f"Mediana del tipo: {pct(med)}",
         )
+
+    st.divider()
+
+    # ── Indicadores de cartera y gestión (cuentas a 6 dígitos) ─────────────────
+    st.subheader("Cartera y gestión (detalle a 6 dígitos)")
+    if e[[c for c, _, _ in INDICADORES_6DIG]].notna().any():
+        ayuda = dict((c, h) for c, _, h in INDICADORES_6DIG)
+        cols = st.columns(4)
+        for i, (code, label, _) in enumerate(INDICADORES_6DIG):
+            val = e[code]
+            med = pares[code].median()
+            delta = (val - med) if val == val and med == med else None
+            cols[i % 4].metric(
+                label, pct(val),
+                delta=(f"{delta:+.1f} pp vs. mediana" if delta is not None else None),
+                help=f"{ayuda[code]} · Mediana del tipo: {pct(med)}",
+            )
+
+        # Mezcla de cartera por modalidad
+        mezcla = [{"Modalidad": nom, "Participación": float(e[c])}
+                  for c, nom in MODALIDADES if e[c] == e[c] and e[c] > 0]
+        if mezcla:
+            st.subheader("Mezcla de cartera por modalidad")
+            fig = px.pie(mezcla, names="Modalidad", values="Participación", hole=0.45,
+                         color_discrete_sequence=px.colors.qualitative.Set2)
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+            fig.update_layout(height=320, margin=dict(t=10, b=10), showlegend=False)
+            st.plotly_chart(fig, width="stretch")
+    else:
+        st.caption("Esta entidad no reporta cuentas de cartera a 6 dígitos.")
 
     st.divider()
 

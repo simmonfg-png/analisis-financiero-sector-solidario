@@ -7,6 +7,8 @@ Lee los Excel originales (data/raw/) y produce tablas limpias en parquet
     entidades.parquet        Maestro de 1.467 entidades + cuentas principales (marzo)
     tasas.parquet            Tasas activas/pasivas ponderadas por entidad (marzo)
     cac_abril.parquet        Cuentas a 6 dígitos de las CAC (abril)
+    saldos_6dig.parquet      Saldos a 6 dígitos de TODAS las entidades (marzo),
+                             solo las cuentas del catálogo de agrupaciones
     riesgo_cartera.parquet   Serie histórica del indicador de cartera y umbrales σ
     var_factores.parquet     Medias y desviaciones de factores de riesgo de mercado
     var_correlacion.parquet  Matriz de correlación entre factores
@@ -147,6 +149,45 @@ def construir_cac_abril() -> pd.DataFrame:
     return out
 
 
+# ── 3b. Saldos a 6 dígitos (todas las entidades, marzo) ──────────────────────
+def construir_saldos_6dig() -> pd.DataFrame:
+    """
+    Del reporte a 6 dígitos (~4 M de filas en 5 hojas) extrae solo las cuentas
+    que usa el catálogo de agrupaciones (src/agrupaciones.py) y las pivotea:
+    una fila por entidad, una columna por código PUC.
+    """
+    from src import agrupaciones
+
+    necesarias = agrupaciones.cuentas_necesarias()
+    xls = pd.ExcelFile(_raw("seisdig"))
+    partes = []
+    for hoja in xls.sheet_names:
+        # La hoja "Parte 1" trae 6 filas de encabezado institucional; el resto no.
+        header = 6 if hoja.strip().lower() == "parte 1" else 0
+        df = pd.read_excel(xls, sheet_name=hoja, header=header)
+        df.columns = [_norm(c) for c in df.columns]
+        df = df.rename(columns={"VALOR EN PESOS": "VALOR"})
+        df = df[["CODIGO ENTIDAD", "CODCUENTA", "VALOR"]]
+        df["CODCUENTA"] = (
+            pd.to_numeric(df["CODCUENTA"], errors="coerce")
+            .astype("Int64").astype(str)
+        )
+        df = df[df["CODCUENTA"].isin(necesarias)].copy()
+        df["CODIGO ENTIDAD"] = pd.to_numeric(df["CODIGO ENTIDAD"], errors="coerce")
+        df = df[df["CODIGO ENTIDAD"].notna()]
+        df["VALOR"] = pd.to_numeric(df["VALOR"], errors="coerce").fillna(0.0)
+        partes.append(df)
+        print(f"  · {hoja}: {len(df):,} filas útiles")
+
+    largo = pd.concat(partes, ignore_index=True)
+    ancho = (largo.pivot_table(index="CODIGO ENTIDAD", columns="CODCUENTA",
+                               values="VALOR", aggfunc="sum")
+             .fillna(0.0).reset_index())
+    ancho["CODIGO ENTIDAD"] = ancho["CODIGO ENTIDAD"].astype(int)
+    ancho.columns.name = None
+    return ancho
+
+
 # ── 4. Serie histórica del indicador de cartera (desviación estándar) ─────────
 def construir_riesgo_cartera() -> pd.DataFrame:
     raw = pd.read_excel(_raw("desviacion"), header=6)
@@ -201,6 +242,7 @@ def main():
         ("entidades.parquet", construir_entidades),
         ("tasas.parquet", construir_tasas),
         ("cac_abril.parquet", construir_cac_abril),
+        ("saldos_6dig.parquet", construir_saldos_6dig),
         ("riesgo_cartera.parquet", construir_riesgo_cartera),
     ]
     for nombre, fn in pasos:

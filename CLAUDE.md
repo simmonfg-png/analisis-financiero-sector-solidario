@@ -42,6 +42,7 @@ src/
   etl.py               # Pipeline: lee los Excel de data/raw/ → parquet en data/processed/
   data.py              # Acceso cacheado a los parquet (st.cache_data); corre ETL si faltan
   analytics.py         # Indicadores vectorizados y agregados (sector/entidad)
+  agrupaciones.py      # Catálogo de agrupaciones PUC (portado de analisis_tasas)
   format.py            # Formateo de cifras COP (pesos, %, cantidades compactas)
   indicators.py        # (Legado) indicadores de un balance suelto — lógica pura
   loader.py, charts.py # (Legado del scaffold inicial)
@@ -54,6 +55,7 @@ views/
 tests/
   test_indicators.py   # Lógica pura (scaffold)
   test_analytics.py    # Analítica a nivel sector/entidad
+  test_agrupaciones.py # Catálogo de agrupaciones + indicadores a 6 dígitos
 data/
   raw/                 # Excel originales (IGNORADOS en git, incl. uno de 95 MB)
   processed/           # Parquet consolidados (~1.2 MB, SÍ versionados)
@@ -77,7 +79,20 @@ Van en `data/raw/` (no se versionan; el ETL los procesa). Son **datos públicos*
 
 ### Tablas procesadas (data/processed/*.parquet)
 `entidades` (1467×62) · `tasas` (172×15) · `cac_abril` (56.709×4) ·
+`saldos_6dig` (1467×217, cuentas del catálogo de agrupaciones) ·
 `riesgo_cartera` (21×5) · `var_factores` (21) · `var_correlacion` (19).
+
+### Metodología de indicadores
+- Los 8 indicadores básicos (`agregar_indicadores`) usan las cuentas principales.
+- Los 17 indicadores avanzados (`indicadores_6dig`) usan **`src/agrupaciones.py`**:
+  catálogo de agrupaciones PUC **portado del proyecto `analisis_tasas`**
+  (`financiero/agrupaciones.py`), donde estas fórmulas están verificadas.
+  Calidad por riesgo, coberturas, fondeos sobre cartera, capital institucional,
+  activos improductivos, eficiencia operativa, márgenes y mezcla por modalidad.
+- No se portaron los indicadores que requieren datos internos de cada
+  cooperativa (raw_cartera, mart_solvencia, IRL, series mensuales): mora por
+  días, duración/maduración, concentración top-20, solvencia regulatoria,
+  ROA/ROE rolling 12M. Decisión del usuario 2026-06-10: no son necesarios aquí.
 
 ### Cifras de referencia del sector (marzo 2026)
 Activos **$61.8 B** · Pasivos $38.8 B · Patrimonio **$23.0 B** ·
@@ -138,7 +153,8 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
       uno (~USD 10/año), usar uno existente, DuckDNS (gratis) o sslip.io
       (gratis, sin registro).
 - [x] **Auto-deploy por webhook** (push a `main` → deploy automático).
-- [ ] (Idea futura) Integrar el detalle a 6 dígitos en el Explorador.
+- [x] **Detalle a 6 dígitos integrado**: catálogo de agrupaciones + 17
+      indicadores avanzados en Explorador y Comparador.
 - [ ] (Idea futura) Mapa coroplético por departamento; página de alertas; export PDF.
 - [ ] (Idea futura) Actualización automática de datos vía Action programada.
 
@@ -147,13 +163,25 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 - Todo en español (UI, comentarios, mensajes de commit).
 - Cifras COP compactas: **B** = billones (10¹²), **mM** = miles de millones, **M** = millones.
 - Indicadores en `src/analytics.py`, protegidos contra división por cero (devuelven NaN).
-- Mensajes de commit terminan con `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- Mensajes de commit terminan con `Co-Authored-By: Claude <modelo> <noreply@anthropic.com>`
+  (el modelo que haga el cambio; hasta junio 2026: Opus 4.8 y Fable 5).
 
 ---
 
 ## 10. Bitácora de cambios
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
+
+- **2026-06-10** — **Indicadores a 6 dígitos:** se porta el catálogo de
+  agrupaciones PUC de `analisis_tasas` a `src/agrupaciones.py` (con versión
+  vectorizada `calcular_df`). Nuevo paso de ETL `construir_saldos_6dig` que
+  extrae del Excel de 95 MB las ~216 cuentas del catálogo →
+  `saldos_6dig.parquet` (1467×217, ~0.7 MB, versionado). 17 indicadores nuevos
+  en `analytics.indicadores_6dig` (calidad por riesgo, coberturas, fondeos,
+  capital institucional, improductivos, eficiencia, márgenes, mezcla de
+  cartera) integrados en Explorador (sección propia + torta de modalidades) y
+  Comparador. Validado: activo 6dig = cuentas principales en las 1467
+  entidades; mediana calidad CAC 6.6%. Tests 14/14 en verde.
 
 - **2026-06-10** — **Auto-deploy:** webhook de GitHub (push a `main`) →
   `webhook-sector.service` (puerto 9000) ejecuta `deploy.sh` (pull + pip +

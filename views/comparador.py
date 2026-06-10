@@ -17,12 +17,26 @@ METRICAS = {
     "FONDEO_DEPOSITOS": "Fondeo por depósitos (%)",
     "MARGEN_EXCEDENTE": "Margen de excedente (%)",
     "EFICIENCIA": "Carga administrativa (%)",
+    # Indicadores a 6 dígitos (catálogo de agrupaciones)
+    "CALIDAD_RIESGO": "Calidad por riesgo (%)",
+    "CARTERA_PRODUCTIVA": "Cartera productiva A+B (%)",
+    "COBERTURA_RIESGO": "Cobertura por riesgo (%)",
+    "COBERTURA_GENERAL": "Cobertura general (%)",
+    "FONDEO_DEP_CARTERA": "Fondeo depósitos / cartera (%)",
+    "FONDEO_APORTES": "Fondeo aportes / cartera (%)",
+    "CAPITAL_INSTITUCIONAL": "Capital institucional (%)",
+    "ACTIVOS_IMPRODUCTIVOS": "Activos improductivos (%)",
+    "EFICIENCIA_OPERATIVA": "Eficiencia operativa (%)",
+    "MARGEN_FINANCIERO": "Margen financiero (%)",
+    "MARGEN_OPERACIONAL": "Margen operacional (%)",
+    "DIVERSIFICACION": "Diversificación de ingresos (%)",
 }
 
 
 def render():
     st.header("⚖️ Comparador de entidades")
     df = an.agregar_indicadores(data.entidades())
+    df = an.agregar_indicadores_6dig(df, data.saldos_6dig())
     nombres = (df["SIGLA"].replace("", None).fillna(df["ENTIDAD"])).tolist()
     df = df.assign(_etq=nombres)
 

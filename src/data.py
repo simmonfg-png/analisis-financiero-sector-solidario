@@ -42,6 +42,12 @@ def cac_abril() -> pd.DataFrame:
     return pd.read_parquet(_ruta("cac_abril.parquet"))
 
 
+@st.cache_data(show_spinner="Cargando saldos a 6 dígitos…")
+def saldos_6dig() -> pd.DataFrame:
+    _asegurar_datos()
+    return pd.read_parquet(_ruta("saldos_6dig.parquet"))
+
+
 @st.cache_data
 def riesgo_cartera() -> pd.DataFrame:
     _asegurar_datos()
