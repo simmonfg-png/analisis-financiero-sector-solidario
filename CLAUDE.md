@@ -98,14 +98,29 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 - Comandos útiles en el servidor:
   `systemctl status|restart sector_solidario` · logs: `journalctl -u sector_solidario -f`.
 
+### Auto-deploy por webhook
+- **Cada `git push` a `main` despliega solo en el servidor** (sin pasos manuales).
+- Receptor: servicio **`webhook-sector.service`** (binario `/usr/bin/webhook`,
+  paquete apt) en el puerto **9000**, config en `/etc/webhook.conf`
+  (verifica firma HMAC-SHA256 y que la rama sea `main`).
+- Acción: ejecuta `/opt/sector-solidario/deploy.sh` → `git pull` +
+  `pip install -r requirements.txt` + `systemctl restart sector_solidario`.
+  Log de despliegues: `/var/log/sector-solidario-deploy.log`.
+- Lado GitHub: webhook id `639150646` (Settings → Webhooks del repo); el secreto
+  HMAC está en `/etc/webhook.conf` del servidor (no se documenta aquí).
+- **OJO:** existe otro servicio systemd llamado `webhook.service` que es del
+  proyecto anterior (`analisis_tasas`, webhook.py propio en puerto 8080).
+  **No tocarlo.** Su unit systemd falla al arrancar (puerto ocupado por un
+  proceso suelto que es el que realmente atiende), pero así estaba y funciona.
+
 ## 7. Cómo actualizar
 
-- **Cambio de código:** editar → `git push` (CI corre tests) → en el servidor:
-  `cd /opt/sector-solidario && git pull && systemctl restart sector_solidario`.
+- **Cambio de código:** editar → `git push`. Eso es todo: CI corre los tests y
+  el webhook despliega solo en el servidor (~30 s).
 - **Datos de un mes nuevo:** poner los Excel en `data/raw/` local → `python -m src.etl`
   (regenera los parquet) → `git add data/processed && git commit && git push` →
-  mismo `git pull` + restart en el servidor.
-- Si cambian las dependencias: además `./venv/bin/pip install -r requirements.txt`.
+  el webhook despliega solo.
+- El deploy.sh ya instala dependencias nuevas (`pip install -r requirements.txt`).
 
 ## 8. Estado actual / pendientes
 
@@ -117,7 +132,7 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 - [x] **Desplegada en el servidor Hetzner** (systemd, puerto 8502). Se descartó
       Streamlit Community Cloud en favor del servidor propio.
 - [ ] (Idea futura) Dominio + HTTPS (p. ej. con Caddy) para ambas apps del servidor.
-- [ ] (Idea futura) Auto-deploy: webhook o cron que haga `git pull` en el servidor.
+- [x] **Auto-deploy por webhook** (push a `main` → deploy automático).
 - [ ] (Idea futura) Integrar el detalle a 6 dígitos en el Explorador.
 - [ ] (Idea futura) Mapa coroplético por departamento; página de alertas; export PDF.
 - [ ] (Idea futura) Actualización automática de datos vía Action programada.
@@ -135,6 +150,10 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-10** — **Auto-deploy:** webhook de GitHub (push a `main`) →
+  `webhook-sector.service` (puerto 9000) ejecuta `deploy.sh` (pull + pip +
+  restart). Verificado con ping 200 y push real. Se respetó intacto el
+  `webhook.service` del proyecto anterior.
 - **2026-06-10** — **Despliegue en Hetzner:** se clona el repo en
   `/opt/sector-solidario`, venv + requirements, y servicio systemd
   `sector_solidario.service` en el puerto 8502 (enabled + Restart=always).
