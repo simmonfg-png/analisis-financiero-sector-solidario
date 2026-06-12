@@ -48,6 +48,27 @@ def saldos_6dig() -> pd.DataFrame:
     return pd.read_parquet(_ruta("saldos_6dig.parquet"))
 
 
+def historico_disponible() -> bool:
+    """True si existe el parquet del histórico CAC (se genera con
+    `python -m src.etl_historico` a partir de los Excel mensuales)."""
+    return os.path.exists(_ruta("historico_cac.parquet"))
+
+
+@st.cache_data(show_spinner="Cargando histórico CAC (5.4 M de saldos)…")
+def historico() -> pd.DataFrame:
+    return pd.read_parquet(_ruta("historico_cac.parquet"))
+
+
+@st.cache_data
+def historico_cuentas() -> pd.DataFrame:
+    return pd.read_parquet(_ruta("historico_cuentas.parquet"))
+
+
+@st.cache_data
+def historico_entidades() -> pd.DataFrame:
+    return pd.read_parquet(_ruta("historico_entidades.parquet"))
+
+
 @st.cache_data
 def riesgo_cartera() -> pd.DataFrame:
     _asegurar_datos()

@@ -141,3 +141,34 @@ def ranking(df: pd.DataFrame, col: str, n: int = 15, ascendente: bool = False) -
     return (df.sort_values(col, ascending=ascendente)
             .head(n)[cols]
             .reset_index(drop=True))
+
+
+# ── Histórico mensual CAC ─────────────────────────────────────────────────────
+
+def serie_historica(hist: pd.DataFrame, cuentas: list[str],
+                    codigo: int | None = None) -> pd.DataFrame:
+    """
+    Serie mensual (PERIODO × CUENTA) a partir del histórico largo.
+    Si `codigo` es None agrega todo el sector; si no, filtra esa entidad.
+    """
+    d = hist if codigo is None else hist[hist["CODIGO ENTIDAD"] == codigo]
+    d = d[d["CUENTA"].isin(cuentas)]
+    piv = d.pivot_table(index="PERIODO", columns="CUENTA", values="VALOR",
+                        aggfunc="sum", observed=True)
+    piv.columns = piv.columns.astype(str)
+    piv.index = piv.index.astype(str)  # PERIODO llega como categórico sin orden
+    return piv.sort_index()
+
+
+def entidades_por_periodo(hist: pd.DataFrame) -> pd.Series:
+    """Número de entidades que reportan en cada período."""
+    n = hist.groupby("PERIODO", observed=True)["CODIGO ENTIDAD"].nunique()
+    n.index = n.index.astype(str)
+    return n.sort_index()
+
+
+def variacion_anual(serie: pd.Series) -> float:
+    """Variación % del último dato frente a 12 meses atrás (NaN si no alcanza)."""
+    if len(serie) < 13 or serie.iloc[-13] == 0:
+        return float("nan")
+    return float((serie.iloc[-1] / serie.iloc[-13] - 1) * 100)

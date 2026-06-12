@@ -9,7 +9,7 @@ Arrancar:  streamlit run app.py
 """
 import streamlit as st
 
-from views import ahorro_credito, comparador, explorador, panorama, riesgo
+from views import ahorro_credito, comparador, explorador, historico, panorama, riesgo
 
 st.set_page_config(
     page_title="Sector Solidario · Análisis Financiero",
@@ -36,6 +36,8 @@ paginas = [
             url_path="explorador"),
     st.Page(ahorro_credito.render, title="Ahorro y crédito", icon="💰",
             url_path="ahorro-credito"),
+    st.Page(historico.render, title="Histórico CAC", icon="📜",
+            url_path="historico"),
     st.Page(riesgo.render, title="Riesgo y supervisión", icon="⚠️",
             url_path="riesgo"),
     st.Page(comparador.render, title="Comparador", icon="⚖️",

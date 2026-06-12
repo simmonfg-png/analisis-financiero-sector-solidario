@@ -8,6 +8,10 @@ data/raw/
 data/**/*.xlsx
 data/**/*.xls
 data/**/*.csv
+# Histórico mensual CAC: 100 Excel (~190 MB); el ETL los consolida en parquet
+ESTADOS FINANCIEROS COOPERATIVAS DE AHORRO Y CREDITO/
+# Archivos de bloqueo de Office
+~$*
 # Los parquet procesados (livianos, ~1 MB) SÍ se versionan para que la app
 # desplegada en la nube tenga datos. Son datos públicos de la Supersolidaria.
 .streamlit/secrets.toml

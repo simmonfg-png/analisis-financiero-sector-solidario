@@ -172,6 +172,39 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-12** — **Página 📜 Histórico CAC** (`views/historico.py`): series
+  mensuales 2018-2026 por entidad o sector (KPIs con variación 12M, cuentas a
+  elegir del catálogo completo, rango de años, tabla). Las fusiones del censo
+  de novedades se anotan como líneas punteadas en las series (EVENTOS por
+  código de entidad; verificado con Coovitel: 4 saltos = 4 fusiones).
+  Funciones nuevas en analytics (`serie_historica`, `entidades_por_periodo`,
+  `variacion_anual`) + loaders en data.py. Tests 18/18.
+  **Arreglos al ETL histórico:** (1) enero 2020 venía con los valores corridos
+  una fila respecto a las etiquetas (creaba ~97 cuentas fantasma y activo=0;
+  se detecta por la fila 100000 vacía y se realinea validando A=P+Pt);
+  (2) reparación de codificación: \x90 espurio en las "É" y "??" por "Ñ";
+  (3) validación final A=P+Pt en los 100 períodos (falla ruidosamente).
+  **Censo de novedades completo** en `NOVEDADES COOPERATIVAS CAC 2018-2026.xlsx`:
+  15 salidas (fusiones: 4 a Coovitel, Utrahuilca, Cootracerrejón, Cooindegabo,
+  Conecta, Juriscoop; liquidaciones: El Progreso Social, Pilotos Civiles),
+  3 entradas (transformación a CAC especializada: Juriscoop, Comuna,
+  Codelcauca) y 4 atrasos (Coagrupo, Soycoop, Avancop, Colgate).
+
+- **2026-06-12** — **Histórico mensual CAC 2018-01 → 2026-04:** el usuario
+  descarga 100 Excel mensuales (carpeta `ESTADOS FINANCIEROS COOPERATIVAS DE
+  AHORRO Y CREDITO/`, no versionada). Nuevo `src/etl_historico.py` que los
+  consolida en formato largo → `data/processed/historico_cac.parquet`
+  (5.37 M filas, 100 períodos, 184 entidades, 1.625 cuentas a 6 dígitos,
+  ~37 MB) + catálogos `historico_cuentas.parquet` y `historico_entidades.parquet`.
+  Particularidades manejadas: layouts cambiantes por época (filas de encabezado
+  localizadas dinámicamente, fila NIT sin rótulo desde 2026, `.xls` con xlrd —
+  **nueva dependencia `xlrd`**), cuenta 100000 duplicada en mayo 2021 (se toma
+  la última fila, que cuadra con P+Pt), transición de catálogo en dic-2025
+  (1.244 cuentas extra ese mes). Validado: A=P+Pt en los 100 períodos,
+  2026-04 idéntico a `cac_abril.parquet` (0 diferencias en 56.709 saldos).
+  Decisión de alcance (2026-06-11): **el portal se enfoca solo en las CAC**
+  (las demás entidades reportan con periodicidades variadas).
+
 - **2026-06-10** — **Indicadores a 6 dígitos:** se porta el catálogo de
   agrupaciones PUC de `analisis_tasas` a `src/agrupaciones.py` (con versión
   vectorizada `calcular_df`). Nuevo paso de ETL `construir_saldos_6dig` que
