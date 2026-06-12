@@ -172,3 +172,23 @@ def variacion_anual(serie: pd.Series) -> float:
     if len(serie) < 13 or serie.iloc[-13] == 0:
         return float("nan")
     return float((serie.iloc[-1] / serie.iloc[-13] - 1) * 100)
+
+
+CUENTAS_FOTO = [A, P, PAT, CART, DEP, EXC]
+
+
+def foto_cac(hist: pd.DataFrame, meta: pd.DataFrame,
+             periodo: str | None = None) -> tuple[pd.DataFrame, str]:
+    """
+    Foto del sector CAC en un período del histórico (por defecto el último):
+    una fila por entidad con las cuentas principales en columnas, enriquecida
+    con los metadatos de `meta` (nombre, sigla, departamento, asociados…).
+    Devuelve (DataFrame, período usado).
+    """
+    per = periodo or str(hist["PERIODO"].astype(str).max())
+    d = hist[(hist["PERIODO"].astype(str) == per) & hist["CUENTA"].isin(CUENTAS_FOTO)]
+    w = (d.pivot_table(index="CODIGO ENTIDAD", columns="CUENTA", values="VALOR",
+                       aggfunc="sum", observed=True)
+         .reindex(columns=CUENTAS_FOTO).fillna(0.0))
+    w.columns = [str(c) for c in w.columns]
+    return w.reset_index().merge(meta, on="CODIGO ENTIDAD", how="left"), per

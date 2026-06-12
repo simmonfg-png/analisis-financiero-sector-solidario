@@ -30,7 +30,7 @@ st.markdown(
 )
 
 paginas = [
-    st.Page(panorama.render, title="Panorama del sector", icon="📈",
+    st.Page(panorama.render, title="Panorama CAC", icon="📈",
             url_path="panorama", default=True),
     st.Page(explorador.render, title="Explorador de entidades", icon="🔍",
             url_path="explorador"),

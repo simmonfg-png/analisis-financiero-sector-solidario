@@ -172,6 +172,15 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-12** — **Reforma Panorama → 📈 Panorama CAC** (`views/panorama.py`):
+  universo solo CAC. Cifras financieras desde el histórico mensual (último
+  corte, con variación 12M en los KPIs vía `analytics.foto_cac` +
+  `serie_historica`); del reporte de cuentas principales solo se usa
+  ASOCIADOS y metadatos de identificación (nombre, sigla, depto, tipo).
+  Filtros: departamento y tipo de CAC. Torta especializadas vs. multiactivas,
+  concentración Top 10/25/50. Tests 19/19. Pendiente reformar las otras
+  4 páginas al universo CAC.
+
 - **2026-06-12** — **Página 📜 Histórico CAC** (`views/historico.py`): series
   mensuales 2018-2026 por entidad o sector (KPIs con variación 12M, cuentas a
   elegir del catálogo completo, rango de años, tabla). Las fusiones del censo
