@@ -375,14 +375,15 @@ def render():
                 usa_sec = usa_sec or eje == "x2"
                 figd.add_trace(go.Bar(y=deps, x=_esc(m, x), orientation="h", name=m,
                                       marker_color=color, offsetgroup=i, alignmentgroup="g",
-                                      text=_txt(m, x), textposition="auto",
-                                      insidetextanchor="start", xaxis=eje))
+                                      text=[f"<b>{t}</b>" for t in _txt(m, x)],
+                                      textposition="auto", insidetextanchor="start",
+                                      textfont=dict(size=14), xaxis=eje))
             figd.update_layout(xaxis=dict(showticklabels=False, showgrid=False))
             if usa_sec:
                 figd.update_layout(xaxis2=dict(overlaying="x", side="top",
                                                showticklabels=False, showgrid=False))
-            alto = max(440, 46 * len(deps))  # ≈46 px/depto → barras amplias + scroll
-            figd.update_layout(barmode="group", bargap=0.12, bargroupgap=0,
+            alto = max(440, 58 * len(deps))  # ≈58 px/depto → barras amplias + scroll
+            figd.update_layout(barmode="group", bargap=0.08, bargroupgap=0,
                                showlegend=False, height=alto,
                                margin=dict(l=0, r=20, t=10, b=0))
             with st.container(height=480):
