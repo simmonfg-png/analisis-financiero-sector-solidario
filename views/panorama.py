@@ -292,19 +292,30 @@ def render():
         m2 = cs[1].selectbox("Eje Y secundario (opcional)", ["— Ninguno —"] + opciones, index=0)
         m2 = None if m2 == "— Ninguno —" else m2
 
-        # Montos en miles de millones (mM); conteos sin escalar.
+        # Montos en miles de millones (÷1e9); asociados en miles (÷1e3);
+        # nº de entidades sin escalar. Las unidades se aclaran en el caption.
         def _monto(metrica):
             return METRICAS_SECTOR[metrica][1]
 
-        def _esc(metrica, valores):  # escala a mM si es monto COP
-            return [v / 1e9 for v in valores] if _monto(metrica) else list(valores)
+        def _escala_div(metrica):
+            if _monto(metrica):
+                return 1e9
+            return 1e3 if metrica == "Número de asociados" else 1
+
+        def _esc(metrica, valores):  # escala los valores según la métrica
+            d = _escala_div(metrica)
+            return [v / d for v in valores]
 
         def _txt(metrica, valores):  # etiquetas de las barras
-            return ([f"{v / 1e9:,.0f}" for v in valores] if _monto(metrica)
+            d = _escala_div(metrica)
+            return ([f"{v / d:,.0f}" for v in valores] if d != 1
                     else [cantidad(v) for v in valores])
 
         def _eje(metrica):  # (título, formato de ticks)
-            return (f"{metrica} (mM COP)", ",.0f") if _monto(metrica) else (metrica, None)
+            return (metrica, ",.0f" if _escala_div(metrica) != 1 else None)
+
+        st.caption("Cifras financieras expresadas en miles de millones de pesos "
+                   "colombianos · Cifra de asociados en miles")
 
         # ── Gráficos lado a lado: por categoría | por departamento ──────────────
         cg = st.columns(2)
