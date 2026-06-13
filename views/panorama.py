@@ -352,26 +352,29 @@ def render():
             d1 = _agrega_metrica(f, "DEPARTAMENTO", m1).sort_values(ascending=False)
             deps = d1.index.tolist()[::-1]  # el mayor arriba en barras horizontales
             x1 = [float(d1[d]) for d in deps]
-            figd = go.Figure()
-            figd.add_trace(go.Bar(y=deps, x=_esc(m1, x1), orientation="h", name=m1,
-                                  marker_color=C_ACT, offsetgroup=0, alignmentgroup="g",
-                                  text=_txt(m1, x1), textposition="outside", cliponaxis=False))
             t1, f1 = _eje(m1)
-            figd.update_layout(xaxis=dict(title=t1, tickformat=f1))
+            figd = go.Figure()
+            # La traza que se agrega de última queda ARRIBA en cada grupo: por eso
+            # la secundaria (azul) va primero (debajo) y la principal (naranja) después.
             if m2:
                 d2 = _agrega_metrica(f, "DEPARTAMENTO", m2)
                 x2 = [float(d2.get(d, 0)) for d in deps]
-                figd.add_trace(go.Bar(y=deps, x=_esc(m2, x2), orientation="h", name=m2,
-                                      marker_color=C_PAT, offsetgroup=1, alignmentgroup="g",
-                                      xaxis="x2"))
                 t2, f2 = _eje(m2)
+                figd.add_trace(go.Bar(y=deps, x=_esc(m2, x2), orientation="h", name=m2,
+                                      marker_color=C_PAT, offsetgroup=0, alignmentgroup="g",
+                                      text=_txt(m2, x2), textposition="outside",
+                                      cliponaxis=False, xaxis="x2"))
                 figd.update_layout(xaxis2=dict(title=t2, tickformat=f2, overlaying="x",
                                                side="top", showgrid=False))
+            figd.add_trace(go.Bar(y=deps, x=_esc(m1, x1), orientation="h", name=m1,
+                                  marker_color=C_ACT, offsetgroup=1, alignmentgroup="g",
+                                  text=_txt(m1, x1), textposition="outside", cliponaxis=False))
+            figd.update_layout(xaxis=dict(title=t1, tickformat=f1))
             # alto generoso (≈34 px por depto) para que el contenedor permita scroll;
             # la leyenda se omite porque el gráfico de la izquierda ya la muestra.
             alto = max(440, 34 * len(deps))
             figd.update_layout(barmode="group", showlegend=False, height=alto,
-                               margin=dict(l=0, r=10, t=30, b=0))
+                               margin=dict(l=0, r=45, t=30, b=0))
             with st.container(height=480):
                 st.plotly_chart(figd, width="stretch")
 
