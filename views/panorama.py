@@ -292,8 +292,19 @@ def render():
         m2 = cs[1].selectbox("Eje Y secundario (opcional)", ["— Ninguno —"] + opciones, index=0)
         m2 = None if m2 == "— Ninguno —" else m2
 
-        def _fmt(metrica, valor):  # COP compacto o conteo compacto
-            return pesos(valor) if METRICAS_SECTOR[metrica][1] else cantidad(valor)
+        # Montos en miles de millones (mM); conteos sin escalar.
+        def _monto(metrica):
+            return METRICAS_SECTOR[metrica][1]
+
+        def _esc(metrica, valores):  # escala a mM si es monto COP
+            return [v / 1e9 for v in valores] if _monto(metrica) else list(valores)
+
+        def _txt(metrica, valores):  # etiquetas de las barras
+            return ([f"{v / 1e9:,.0f}" for v in valores] if _monto(metrica)
+                    else [cantidad(v) for v in valores])
+
+        def _eje(metrica):  # (título, formato de ticks)
+            return (f"{metrica} (mM COP)", ",.0f") if _monto(metrica) else (metrica, None)
 
         # ── Gráfico 1 · por categoría regulatoria (Plena → Intermedia → Básica) ─
         st.subheader("Por categoría regulatoria")
@@ -301,20 +312,22 @@ def render():
         s1 = _agrega_metrica(f, "CATEGORIA", m1)
         y1 = [float(s1.get(c, 0)) for c in cats]
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.add_trace(go.Bar(x=cats, y=y1, name=m1, marker_color=C_ACT,
-                             text=[_fmt(m1, v) for v in y1], textposition="outside"),
+        fig.add_trace(go.Bar(x=cats, y=_esc(m1, y1), name=m1, marker_color=C_ACT,
+                             offsetgroup=0, alignmentgroup="g",
+                             text=_txt(m1, y1), textposition="outside"),
                       secondary_y=False)
-        fig.update_yaxes(title_text=m1, secondary_y=False)
+        t1, f1 = _eje(m1)
+        fig.update_yaxes(title_text=t1, tickformat=f1, secondary_y=False)
         if m2:
             s2 = _agrega_metrica(f, "CATEGORIA", m2)
             y2 = [float(s2.get(c, 0)) for c in cats]
-            fig.add_trace(go.Scatter(x=cats, y=y2, name=m2, mode="lines+markers+text",
-                                     marker_color=C_PAT, line=dict(width=3),
-                                     text=[_fmt(m2, v) for v in y2],
-                                     textposition="top center"),
+            fig.add_trace(go.Bar(x=cats, y=_esc(m2, y2), name=m2, marker_color=C_PAT,
+                                 offsetgroup=1, alignmentgroup="g",
+                                 text=_txt(m2, y2), textposition="outside"),
                           secondary_y=True)
-            fig.update_yaxes(title_text=m2, secondary_y=True)
-        fig.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0),
+            t2, f2 = _eje(m2)
+            fig.update_yaxes(title_text=t2, tickformat=f2, secondary_y=True)
+        fig.update_layout(barmode="group", height=400, margin=dict(l=0, r=0, t=20, b=0),
                           legend=dict(orientation="h", y=-0.15))
         st.plotly_chart(fig, width="stretch")
 
@@ -324,17 +337,21 @@ def render():
         deps = d1.index.tolist()[::-1]  # el mayor arriba en barras horizontales
         x1 = [float(d1[d]) for d in deps]
         figd = go.Figure()
-        figd.add_trace(go.Bar(y=deps, x=x1, orientation="h", name=m1, marker_color=C_ACT,
-                              text=[_fmt(m1, v) for v in x1], textposition="outside"))
-        figd.update_layout(xaxis_title=m1)
+        figd.add_trace(go.Bar(y=deps, x=_esc(m1, x1), orientation="h", name=m1,
+                              marker_color=C_ACT, offsetgroup=0, alignmentgroup="g",
+                              text=_txt(m1, x1), textposition="outside"))
+        t1, f1 = _eje(m1)
+        figd.update_layout(xaxis=dict(title=t1, tickformat=f1))
         if m2:
             d2 = _agrega_metrica(f, "DEPARTAMENTO", m2)
             x2 = [float(d2.get(d, 0)) for d in deps]
-            figd.add_trace(go.Scatter(y=deps, x=x2, mode="lines+markers", name=m2,
-                                      marker_color=C_PAT, line=dict(width=3), xaxis="x2"))
-            figd.update_layout(xaxis2=dict(overlaying="x", side="top", title=m2,
-                                           showgrid=False))
-        figd.update_layout(height=430, margin=dict(l=0, r=0, t=30, b=0),
+            figd.add_trace(go.Bar(y=deps, x=_esc(m2, x2), orientation="h", name=m2,
+                                  marker_color=C_PAT, offsetgroup=1, alignmentgroup="g",
+                                  xaxis="x2"))
+            t2, f2 = _eje(m2)
+            figd.update_layout(xaxis2=dict(title=t2, tickformat=f2, overlaying="x",
+                                           side="top", showgrid=False))
+        figd.update_layout(barmode="group", height=430, margin=dict(l=0, r=0, t=30, b=0),
                            legend=dict(orientation="h", y=-0.12))
         st.plotly_chart(figd, width="stretch")
 
