@@ -314,6 +314,24 @@ def panel_mensual(hist: pd.DataFrame, codigos=None) -> pd.DataFrame:
     return w.fillna(0.0).sort_index()
 
 
+def agrupaciones_entidad(hist: pd.DataFrame, periodo: str,
+                         aliases: list[str]) -> pd.DataFrame:
+    """Monto de cada agrupación del catálogo PUC **por entidad** en un período.
+
+    Pivota el histórico a CODIGO ENTIDAD × CUENTA en el corte dado y aplica
+    `ag.calcular_df`. Devuelve CODIGO ENTIDAD + una columna por alias. Permite
+    sumar agrupaciones (Cartera bruta, Aportes…) por grupos de entidades."""
+    d = hist[hist["PERIODO"].astype(str) == str(periodo)]
+    w = d.pivot_table(index="CODIGO ENTIDAD", columns="CUENTA", values="VALOR",
+                      aggfunc="sum", observed=True).fillna(0.0)
+    w.columns = w.columns.astype(str)
+    w = w.reset_index()
+    out = pd.DataFrame({"CODIGO ENTIDAD": w["CODIGO ENTIDAD"].astype(int)})
+    for alias in aliases:
+        out[alias] = ag.calcular_df(alias, w).values
+    return out
+
+
 def serie_alias(panel: pd.DataFrame, alias: str) -> pd.Series:
     """Serie mensual del monto de una agrupación (suma de cuentas del catálogo)."""
     s = ag.calcular_df(alias, panel)

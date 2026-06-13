@@ -172,6 +172,20 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Pestaña "Sector"** en el Panorama CAC (`views/panorama.py`,
+  índice 2, tras "Principales cifras"). Tres bloques: (1) **gráfico por
+  categoría** regulatoria con X fijo Plena→Intermedia→Básica y selector de hasta
+  dos métricas (Activo/Pasivo/Patrimonio/Cartera bruta/Depósitos/Aportes/Nº
+  asociados/Nº entidades): la 1ª va al eje Y principal (barras) y la 2ª al eje Y
+  secundario (línea); (2) **gráfico por departamento** (barras horizontales,
+  top 10 según la métrica principal, con la secundaria en eje X superior),
+  depende de las mismas métricas; (3) **tabla de entidades** (Entidad/Sigla/
+  Asociados/Activos) con selector "Ver" (Todas o por subcategoría) y orden por
+  Activos o Nº de asociados, con columna de ranking. Nueva función
+  `analytics.agrupaciones_entidad` (aplica el catálogo PUC **por entidad** en un
+  corte) para obtener Cartera bruta y Aportes por entidad; el resto de métricas
+  salen de la foto. Tests 27/27.
+
 - **2026-06-13** — **Principales cifras: Activo/Pasivo/Patrimonio**. En la
   pestaña "Principales cifras" del Panorama CAC se añade la sección "Activo,
   Pasivo y Patrimonio" con tres métricas (total + variación 12M) y dos gráficas:

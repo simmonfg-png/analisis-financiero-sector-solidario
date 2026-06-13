@@ -10,11 +10,13 @@ principales solo se usa ASOCIADOS y los metadatos de identificación.
 from __future__ import annotations
 
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
+from plotly.subplots import make_subplots
 
 from src import analytics as an
 from src import data
-from src.format import GLOSARIO, miles, pesos, pct
+from src.format import GLOSARIO, cantidad, miles, pesos, pct
 
 PALETA = px.colors.qualitative.Set2
 
@@ -51,6 +53,28 @@ PATRIMONIO_COMP = [
     ("CAPITAL_SOCIAL", "Capital social"), ("CAPITAL_INSTITUCIONAL", "Capital institucional"),
     ("EXCEDENTE", "Excedente del ejercicio"),
 ]
+
+# ── Pestaña Sector ────────────────────────────────────────────────────────────
+# Métricas seleccionables → (columna en la foto enriquecida, ¿es monto en COP?).
+# "Número de entidades" se calcula contando filas (columna especial __count__).
+METRICAS_SECTOR = {
+    "Activo": ("100000", True),
+    "Pasivo": ("200000", True),
+    "Patrimonio": ("300000", True),
+    "Cartera bruta": ("CARTERA_BRUTA", True),
+    "Depósitos": ("210000", True),
+    "Aportes": ("APORTES_SOCIALES_ASOCIADOS", True),
+    "Número de asociados": ("ASOCIADOS", False),
+    "Número de entidades": ("__count__", False),
+}
+ORDEN_CATEGORIAS = ["Plena", "Intermedia", "Básica"]
+
+
+def _agrega_metrica(df, grupo_col, metrica):
+    """Suma (o cuenta) la métrica por grupo; devuelve una Serie indexada por grupo."""
+    col, _ = METRICAS_SECTOR[metrica]
+    g = df.groupby(grupo_col, observed=True)
+    return g.size() if col == "__count__" else g[col].sum()
 
 
 _MESES = {"03": "mar", "06": "jun", "09": "sep", "12": "dic"}
@@ -130,6 +154,9 @@ def render():
     clasif = data.clasificacion_cac()
     foto = foto.merge(clasif[["CODIGO ENTIDAD", "CATEGORIA", "SUBCATEGORIA"]],
                       on="CODIGO ENTIDAD", how="left")
+    # Agrupaciones por entidad (Cartera bruta y Aportes) para la pestaña Sector
+    agr = an.agrupaciones_entidad(h, corte, ["CARTERA_BRUTA", "APORTES_SOCIALES_ASOCIADOS"])
+    foto = foto.merge(agr, on="CODIGO ENTIDAD", how="left")
     with st.sidebar:
         st.subheader("Filtros")
         deptos = sorted(foto["DEPARTAMENTO"].dropna().unique())
@@ -186,7 +213,7 @@ def render():
 
     sc[0].caption(f"**{len(f)}** cooperativas reportan en **{corte}**")
 
-    tabs = st.tabs(["Principales cifras", "Balance", "Cartera",
+    tabs = st.tabs(["Principales cifras", "Sector", "Balance", "Cartera",
                     "Depósitos y fondeo", "Rentabilidad", "Glosario"])
 
     # ── TAB 1 · Principales cifras ──────────────────────────────────────────────
@@ -257,8 +284,80 @@ def render():
                           if ff.head(i + 1)["100000"].sum() >= total / 2), len(ff))
             st.info(f"El **50% de los activos** está en **{n_top}** cooperativas de {len(ff):,}.")
 
-    # ── TAB 2 · Balance ─────────────────────────────────────────────────────────
+    # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
+        opciones = list(METRICAS_SECTOR.keys())
+        cs = st.columns(2)
+        m1 = cs[0].selectbox("Eje Y (principal)", opciones, index=opciones.index("Activo"))
+        m2 = cs[1].selectbox("Eje Y secundario (opcional)", ["— Ninguno —"] + opciones, index=0)
+        m2 = None if m2 == "— Ninguno —" else m2
+
+        def _fmt(metrica, valor):  # COP compacto o conteo compacto
+            return pesos(valor) if METRICAS_SECTOR[metrica][1] else cantidad(valor)
+
+        # ── Gráfico 1 · por categoría regulatoria (Plena → Intermedia → Básica) ─
+        st.subheader("Por categoría regulatoria")
+        cats = [c for c in ORDEN_CATEGORIAS if c in f["CATEGORIA"].dropna().unique()]
+        s1 = _agrega_metrica(f, "CATEGORIA", m1)
+        y1 = [float(s1.get(c, 0)) for c in cats]
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.add_trace(go.Bar(x=cats, y=y1, name=m1, marker_color=C_ACT,
+                             text=[_fmt(m1, v) for v in y1], textposition="outside"),
+                      secondary_y=False)
+        fig.update_yaxes(title_text=m1, secondary_y=False)
+        if m2:
+            s2 = _agrega_metrica(f, "CATEGORIA", m2)
+            y2 = [float(s2.get(c, 0)) for c in cats]
+            fig.add_trace(go.Scatter(x=cats, y=y2, name=m2, mode="lines+markers+text",
+                                     marker_color=C_PAT, line=dict(width=3),
+                                     text=[_fmt(m2, v) for v in y2],
+                                     textposition="top center"),
+                          secondary_y=True)
+            fig.update_yaxes(title_text=m2, secondary_y=True)
+        fig.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0),
+                          legend=dict(orientation="h", y=-0.15))
+        st.plotly_chart(fig, width="stretch")
+
+        # ── Gráfico 2 · por departamento (top 10 según la métrica principal) ────
+        st.subheader("Por departamento (top 10)")
+        d1 = _agrega_metrica(f, "DEPARTAMENTO", m1).sort_values(ascending=False).head(10)
+        deps = d1.index.tolist()[::-1]  # el mayor arriba en barras horizontales
+        x1 = [float(d1[d]) for d in deps]
+        figd = go.Figure()
+        figd.add_trace(go.Bar(y=deps, x=x1, orientation="h", name=m1, marker_color=C_ACT,
+                              text=[_fmt(m1, v) for v in x1], textposition="outside"))
+        figd.update_layout(xaxis_title=m1)
+        if m2:
+            d2 = _agrega_metrica(f, "DEPARTAMENTO", m2)
+            x2 = [float(d2.get(d, 0)) for d in deps]
+            figd.add_trace(go.Scatter(y=deps, x=x2, mode="lines+markers", name=m2,
+                                      marker_color=C_PAT, line=dict(width=3), xaxis="x2"))
+            figd.update_layout(xaxis2=dict(overlaying="x", side="top", title=m2,
+                                           showgrid=False))
+        figd.update_layout(height=430, margin=dict(l=0, r=0, t=30, b=0),
+                           legend=dict(orientation="h", y=-0.12))
+        st.plotly_chart(figd, width="stretch")
+
+        # ── Tabla · ranking de entidades ───────────────────────────────────────
+        st.subheader("Entidades")
+        tc = st.columns([2, 3])
+        subs = sorted(f["SUBCATEGORIA"].dropna().unique())
+        ver = tc[0].selectbox("Ver", ["Todas"] + subs)
+        orden = tc[1].radio("Ordenar por", ["Activos", "Número de asociados"],
+                            horizontal=True)
+        col_ord = "100000" if orden == "Activos" else "ASOCIADOS"
+        t = f if ver == "Todas" else f[f["SUBCATEGORIA"] == ver]
+        t = t.sort_values(col_ord, ascending=False).reset_index(drop=True)
+        tabla = t[["ENTIDAD", "SIGLA", "ASOCIADOS", "100000"]].copy()
+        tabla.insert(0, "#", range(1, len(tabla) + 1))
+        tabla["ASOCIADOS"] = tabla["ASOCIADOS"].map(miles)
+        tabla["100000"] = tabla["100000"].map(pesos)
+        tabla = tabla.rename(columns={"ENTIDAD": "Entidad", "SIGLA": "Sigla",
+                                      "ASOCIADOS": "Asociados", "100000": "Activos"})
+        st.dataframe(tabla, width="stretch", hide_index=True)
+
+    # ── TAB 3 · Balance ─────────────────────────────────────────────────────────
+    with tabs[2]:
         st.subheader("Evolución de las cuentas de balance")
         evol = serie[["100000", "200000", "300000"]].rename(
             columns={"100000": "Activo", "200000": "Pasivo", "300000": "Patrimonio"})
@@ -300,8 +399,8 @@ def render():
             fig.update_layout(height=320, margin=dict(t=10, b=0), showlegend=False)
             st.plotly_chart(fig, width="stretch")
 
-    # ── TAB 3 · Cartera ─────────────────────────────────────────────────────────
-    with tabs[2]:
+    # ── TAB 4 · Cartera ─────────────────────────────────────────────────────────
+    with tabs[3]:
         cb = va("CARTERA_BRUTA")
         ri = va("CARTERA_EN_RIESGO")
         pr = va("PROVISIONES_TOTAL")
@@ -334,8 +433,8 @@ def render():
 
         _area_modalidades(panel, MODALIDADES, "Evolución de la cartera por modalidad")
 
-    # ── TAB 4 · Depósitos y fondeo ──────────────────────────────────────────────
-    with tabs[3]:
+    # ── TAB 5 · Depósitos y fondeo ──────────────────────────────────────────────
+    with tabs[4]:
         dep_total = sum(va(a) for a, _ in DEPOSITOS)
         k = st.columns(4)
         _hero(k[0], "Depósitos (sin intereses)", pesos(dep_total), C_DEP)
@@ -371,8 +470,8 @@ def render():
                           legend=dict(orientation="h", y=-0.2))
         st.plotly_chart(fig, width="stretch")
 
-    # ── TAB 5 · Rentabilidad ────────────────────────────────────────────────────
-    with tabs[4]:
+    # ── TAB 6 · Rentabilidad ────────────────────────────────────────────────────
+    with tabs[5]:
         roa, roe = an.roa_roe(panel)
         ing = va("INGRESOS_CARTERA")
         cf = va("COSTOS_FINANCIEROS")
@@ -413,8 +512,8 @@ def render():
                           legend=dict(orientation="h", y=-0.2))
         st.plotly_chart(fig, width="stretch")
 
-    # ── TAB 6 · Glosario ────────────────────────────────────────────────────────
-    with tabs[5]:
+    # ── TAB 7 · Glosario ────────────────────────────────────────────────────────
+    with tabs[6]:
         st.subheader("Glosario")
         st.markdown(
             "- **Activo / Pasivo / Patrimonio**: clases 1, 2 y 3 del PUC.\n"
