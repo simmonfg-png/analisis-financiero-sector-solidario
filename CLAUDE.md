@@ -172,6 +172,16 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Panorama CAC rediseñado al estilo "Principales cifras"**
+  (tablero Superfinanciera). `views/panorama.py`: **selector de fecha de corte**
+  (cualquiera de los 100 meses del histórico → recalcula todo vía `foto_cac`),
+  **4 pestañas** (`st.tabs`): Principales cifras (KPIs destacados de color +
+  grid con variación 12M), Activo·Pasivo (evolución de balance + activos por
+  depto + torta especializadas/multiactivas), Indicadores (profundización con
+  **ratios internos** Cartera/Activo, Depósitos/Activo, Solvencia + evolución +
+  concentración Top 10/25/50 + ranking) y Glosario. Sin PIB (decisión del
+  usuario: ratios internos). Verificado en navegador. Tests 19/19.
+
 - **2026-06-12** — **Reforma Panorama → 📈 Panorama CAC** (`views/panorama.py`):
   universo solo CAC. Cifras financieras desde el histórico mensual (último
   corte, con variación 12M en los KPIs vía `analytics.foto_cac` +
