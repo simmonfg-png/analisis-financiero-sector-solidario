@@ -176,8 +176,11 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
   índice 2, tras "Principales cifras"). Tres bloques: (1) **gráfico por
   categoría** regulatoria con X fijo Plena→Intermedia→Básica y selector de hasta
   dos métricas (Activo/Pasivo/Patrimonio/Cartera bruta/Depósitos/Aportes/Nº
-  asociados/Nº entidades): la 1ª va al eje Y principal y la 2ª al eje Y
-  secundario, ambas como **barras agrupadas** (offsetgroup + barmode group);
+  asociados/Nº entidades) en **barras agrupadas** (offsetgroup + barmode group);
+  los ejes se asignan **por tipo de métrica**: las cifras financieras comparten
+  escala (mM) y van al eje principal, y los conteos (asociados/entidades) al eje
+  secundario, que solo se activa si se elige un conteo (si solo hay conteos, el
+  1º ocupa el principal);
   (2) **gráfico por departamento** (barras horizontales, **todos** los deptos
   con scroll vertical dentro de un `st.container(height=480)`, ordenados por la
   métrica principal, con la secundaria en eje X superior) — va **en la misma

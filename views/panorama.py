@@ -288,8 +288,8 @@ def render():
     with tabs[1]:
         opciones = list(METRICAS_SECTOR.keys())
         cs = st.columns(2)
-        m1 = cs[0].selectbox("Eje Y (principal)", opciones, index=opciones.index("Activo"))
-        m2 = cs[1].selectbox("Eje Y secundario (opcional)", ["— Ninguno —"] + opciones, index=0)
+        m1 = cs[0].selectbox("Métrica 1", opciones, index=opciones.index("Activo"))
+        m2 = cs[1].selectbox("Métrica 2 (opcional)", ["— Ninguno —"] + opciones, index=0)
         m2 = None if m2 == "— Ninguno —" else m2
 
         # Montos en miles de millones (÷1e9); asociados en miles (÷1e3);
@@ -311,8 +311,23 @@ def render():
             return ([f"{v / d:,.0f}" for v in valores] if d != 1
                     else [cantidad(v) for v in valores])
 
-        def _eje(metrica):  # (título, formato de ticks)
-            return (metrica, ",.0f" if _escala_div(metrica) != 1 else None)
+        # Asignación de ejes POR TIPO de métrica: las cifras financieras comparten
+        # escala (mM) y van al eje principal; los conteos (asociados/entidades) van
+        # al eje secundario. Si solo se eligen conteos, el 1º ocupa el principal.
+        metricas_sel = [m for m in (m1, m2) if m]
+        if any(_monto(m) for m in metricas_sel):
+            secundarias = {m for m in metricas_sel if not _monto(m)}
+        else:
+            secundarias = set(metricas_sel[1:])
+
+        def _sec(metrica):
+            return metrica in secundarias
+
+        def _titulo_eje(secundario):  # título según las métricas de ese eje
+            metr = [m for m in metricas_sel if _sec(m) == secundario]
+            if not metr:
+                return ""
+            return "mM COP" if any(_monto(m) for m in metr) else metr[0]
 
         st.caption("Cifras financieras expresadas en miles de millones de pesos "
                    "colombianos · Cifra de asociados en miles")
@@ -324,24 +339,19 @@ def render():
         with cg[0]:
             st.subheader("Por categoría regulatoria")
             cats = [c for c in ORDEN_CATEGORIAS if c in f["CATEGORIA"].dropna().unique()]
-            s1 = _agrega_metrica(f, "CATEGORIA", m1)
-            y1 = [float(s1.get(c, 0)) for c in cats]
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-            fig.add_trace(go.Bar(x=cats, y=_esc(m1, y1), name=m1, marker_color=C_ACT,
-                                 offsetgroup=0, alignmentgroup="g",
-                                 text=_txt(m1, y1), textposition="outside"),
-                          secondary_y=False)
-            t1, f1 = _eje(m1)
-            fig.update_yaxes(title_text=t1, tickformat=f1, secondary_y=False)
-            if m2:
-                s2 = _agrega_metrica(f, "CATEGORIA", m2)
-                y2 = [float(s2.get(c, 0)) for c in cats]
-                fig.add_trace(go.Bar(x=cats, y=_esc(m2, y2), name=m2, marker_color=C_PAT,
-                                     offsetgroup=1, alignmentgroup="g",
-                                     text=_txt(m2, y2), textposition="outside"),
-                              secondary_y=True)
-                t2, f2 = _eje(m2)
-                fig.update_yaxes(title_text=t2, tickformat=f2, secondary_y=True)
+            for i, (m, color) in enumerate([(m1, C_ACT), (m2, C_PAT)]):
+                if not m:
+                    continue
+                s = _agrega_metrica(f, "CATEGORIA", m)
+                y = [float(s.get(c, 0)) for c in cats]
+                fig.add_trace(go.Bar(x=cats, y=_esc(m, y), name=m, marker_color=color,
+                                     offsetgroup=i, alignmentgroup="g",
+                                     text=_txt(m, y), textposition="outside"),
+                              secondary_y=_sec(m))
+            fig.update_yaxes(title_text=_titulo_eje(False), tickformat=",.0f", secondary_y=False)
+            if secundarias:
+                fig.update_yaxes(title_text=_titulo_eje(True), tickformat=",.0f", secondary_y=True)
             fig.update_layout(barmode="group", height=480, margin=dict(l=0, r=0, t=20, b=0),
                               legend=dict(orientation="h", y=-0.15))
             st.plotly_chart(fig, width="stretch")
@@ -349,30 +359,29 @@ def render():
         # Gráfico 2 · por departamento (todos; se desliza dentro del contenedor)
         with cg[1]:
             st.subheader("Por departamento")
-            d1 = _agrega_metrica(f, "DEPARTAMENTO", m1).sort_values(ascending=False)
-            deps = d1.index.tolist()[::-1]  # el mayor arriba en barras horizontales
-            x1 = [float(d1[d]) for d in deps]
+            deps = (_agrega_metrica(f, "DEPARTAMENTO", m1)
+                    .sort_values(ascending=False).index.tolist()[::-1])  # mayor arriba
             figd = go.Figure()
             # La traza que se agrega de última queda ARRIBA en cada grupo: por eso
-            # la secundaria (azul) va primero (debajo) y la principal (naranja) después.
-            # Los valores van DENTRO de la barra; los ejes X no muestran título ni ticks.
-            if m2:
-                d2 = _agrega_metrica(f, "DEPARTAMENTO", m2)
-                x2 = [float(d2.get(d, 0)) for d in deps]
-                figd.add_trace(go.Bar(y=deps, x=_esc(m2, x2), orientation="h", name=m2,
-                                      marker_color=C_PAT, offsetgroup=0, alignmentgroup="g",
-                                      text=_txt(m2, x2), textposition="auto",
-                                      insidetextanchor="start", xaxis="x2"))
+            # la 2ª (azul) va primero (debajo) y la 1ª (naranja) después.
+            # Los valores van DENTRO de la barra (auto); los ejes X no muestran ticks.
+            usa_sec = False
+            for i, (m, color) in [(0, (m2, C_PAT)), (1, (m1, C_ACT))]:
+                if not m:
+                    continue
+                s = _agrega_metrica(f, "DEPARTAMENTO", m)
+                x = [float(s.get(d, 0)) for d in deps]
+                eje = "x2" if _sec(m) else "x"
+                usa_sec = usa_sec or eje == "x2"
+                figd.add_trace(go.Bar(y=deps, x=_esc(m, x), orientation="h", name=m,
+                                      marker_color=color, offsetgroup=i, alignmentgroup="g",
+                                      text=_txt(m, x), textposition="auto",
+                                      insidetextanchor="start", xaxis=eje))
+            figd.update_layout(xaxis=dict(showticklabels=False, showgrid=False))
+            if usa_sec:
                 figd.update_layout(xaxis2=dict(overlaying="x", side="top",
                                                showticklabels=False, showgrid=False))
-            figd.add_trace(go.Bar(y=deps, x=_esc(m1, x1), orientation="h", name=m1,
-                                  marker_color=C_ACT, offsetgroup=1, alignmentgroup="g",
-                                  text=_txt(m1, x1), textposition="auto",
-                                  insidetextanchor="start"))
-            figd.update_layout(xaxis=dict(showticklabels=False, showgrid=False))
-            # alto generoso (≈34 px por depto) para que el contenedor permita scroll;
-            # la leyenda se omite porque el gráfico de la izquierda ya la muestra.
-            alto = max(440, 46 * len(deps))
+            alto = max(440, 46 * len(deps))  # ≈46 px/depto → barras amplias + scroll
             figd.update_layout(barmode="group", bargap=0.12, bargroupgap=0,
                                showlegend=False, height=alto,
                                margin=dict(l=0, r=20, t=10, b=0))
