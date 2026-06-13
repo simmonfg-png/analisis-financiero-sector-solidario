@@ -227,9 +227,22 @@ def subcategoria_cac(activo, uvr: float = UVR_DIC_2024):
 
 # Período de referencia de la clasificación. La norma usa los activos a 31-dic
 # del año anterior (Art. 2.11.13.1.2, Parágrafo 1) y la UVR de esa fecha.
-# La clasificación NO se recalcula cada mes: se actualiza manualmente (aquí)
-# cuando la Supersolidaria reclasifique.
+# La clasificación NO se recalcula cada mes: se mantiene fija y se actualiza
+# manualmente (aquí) solo cuando la Supersolidaria reclasifique.
+#
+# Reclasificar exige 3 cierres anuales consecutivos cruzando el umbral, así que
+# los cambios son infrecuentes y deliberados. Para actualizar:
+#   1) ajustar CATEGORIA_REF_PERIODO al nuevo dic de referencia (y, si cambió la
+#      UVR, actualizar UVR_DIC_2024 / el valor usado), o
+#   2) usar CATEGORIA_OVERRIDES para forzar la categoría de entidades puntuales.
+# Decisión del usuario (2026-06-13): enfoque manual; no automatizar la regla de
+# los 3 años (requeriría la UVR de cada 31-dic, que hoy no tenemos).
 CATEGORIA_REF_PERIODO = "2024-12"
+
+# Overrides manuales {CODIGO ENTIDAD: "Básica"|"Intermedia"|"Plena"} para
+# imponer la categoría oficial cuando difiera del cálculo por activos de
+# referencia (p. ej. tras una reclasificación de la Supersolidaria). Vacío hoy.
+CATEGORIA_OVERRIDES: dict[int, str] = {}
 
 
 def activos_referencia(hist: pd.DataFrame,
@@ -246,16 +259,25 @@ def activos_referencia(hist: pd.DataFrame,
 
 
 def clasificar_cac(hist: pd.DataFrame, ref_periodo: str = CATEGORIA_REF_PERIODO,
-                   uvr: float = UVR_DIC_2024) -> pd.DataFrame:
+                   uvr: float = UVR_DIC_2024,
+                   overrides: dict[int, str] | None = None) -> pd.DataFrame:
     """Clasificación FIJA por entidad (categoría y subcategoría) según los
-    activos del período de referencia. No depende del corte que se visualiza."""
+    activos del período de referencia. No depende del corte que se visualiza.
+    `overrides` impone la categoría oficial de entidades puntuales; su
+    subcategoría pasa al Grupo 1 (tope) de la categoría forzada."""
+    overrides = CATEGORIA_OVERRIDES if overrides is None else overrides
     ref = activos_referencia(hist, ref_periodo)
-    return pd.DataFrame({
+    out = pd.DataFrame({
         "CODIGO ENTIDAD": ref.index,
         "ACTIVO_REF": ref.values,
         "CATEGORIA": categoria_cac(ref, uvr).values,
         "SUBCATEGORIA": subcategoria_cac(ref, uvr).values,
     })
+    for cod, cat in overrides.items():
+        m = out["CODIGO ENTIDAD"] == cod
+        out.loc[m, "CATEGORIA"] = cat
+        out.loc[m, "SUBCATEGORIA"] = SUBCATEGORIAS[cat][0]  # Grupo 1 por defecto
+    return out
 
 
 def foto_cac(hist: pd.DataFrame, meta: pd.DataFrame,

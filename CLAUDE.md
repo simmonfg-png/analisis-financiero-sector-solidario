@@ -182,7 +182,12 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
   Intermedia G1/G2 = punto medio ~$323 mM; Plena sin dividir), `activos_referencia`,
   `clasificar_cac`; `data.clasificacion_cac()` cacheada. Filtro **Subcategoría**
   en cascada desde Categoría. Reparto dic-2024: Básica 133 (G3=85), Intermedia
-  43, Plena 8. Tests 26/26.
+  43, Plena 8. Tests 26/26. **Enfoque manual confirmado** (usuario, 2026-06-13):
+  la reclasificación oficial exige 3 cierres anuales consecutivos cruzando el
+  umbral (no se automatiza; requeriría la UVR de cada 31-dic). Se añade hook
+  `CATEGORIA_OVERRIDES` para forzar la categoría de entidades puntuales tras una
+  reclasificación. Ej.: COAGROSUR (4458) sigue Básica-G1 (dic-2024 $116.6 mM);
+  cruzó el tope por primera vez en dic-2025, así que no se reclasificaría pronto.
 
 - **2026-06-13** — **Filtros del Panorama CAC**: se quita "Tipo de CAC" y se
   agregan **Municipio** (depende del departamento elegido) y **Categoría**

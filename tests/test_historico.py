@@ -174,3 +174,15 @@ def test_clasificar_cac_fija_por_periodo_referencia():
     cl = an.clasificar_cac(pd.DataFrame(filas), ref_periodo="2024-12").set_index("CODIGO ENTIDAD")
     assert cl.loc[1, "CATEGORIA"] == "Básica"   # por dic-2024, no por 2026
     assert cl.loc[2, "CATEGORIA"] == "Plena"    # sin dic-2024 → primer período
+
+
+def test_clasificar_cac_overrides():
+    filas = [
+        {"PERIODO": "2024-12", "CODIGO ENTIDAD": 1, "CUENTA": "100000", "VALOR": 10e9},
+        {"PERIODO": "2024-12", "CODIGO ENTIDAD": 2, "CUENTA": "100000", "VALOR": 10e9},
+    ]
+    cl = an.clasificar_cac(pd.DataFrame(filas), ref_periodo="2024-12",
+                           overrides={2: "Intermedia"}).set_index("CODIGO ENTIDAD")
+    assert cl.loc[1, "CATEGORIA"] == "Básica"          # sin override
+    assert cl.loc[2, "CATEGORIA"] == "Intermedia"      # forzada
+    assert cl.loc[2, "SUBCATEGORIA"] == "Intermedia - Grupo 1"
