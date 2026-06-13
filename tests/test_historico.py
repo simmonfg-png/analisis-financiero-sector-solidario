@@ -140,3 +140,37 @@ def test_categoria_cac():
     assert an.categoria_cac(t2) == "Plena"         # igual o superior → Plena
     s = an.categoria_cac(pd.Series([1e9, 2e11, 6e11]))
     assert list(s) == ["Básica", "Intermedia", "Plena"]
+
+
+def test_subcategoria_cac():
+    uvr = an.UVR_DIC_2024
+    t1 = 315_000_000 * uvr
+    t2 = 1_400_000_000 * uvr
+    mid = (t1 + t2) / 2
+    b1, b2 = t1 / 3, 2 * t1 / 3
+    assert an.subcategoria_cac(t2) == "Plena"
+    assert an.subcategoria_cac(mid) == "Intermedia - Grupo 1"
+    assert an.subcategoria_cac(mid - 1) == "Intermedia - Grupo 2"
+    assert an.subcategoria_cac(t1) == "Básica - Grupo 1"      # tope de Básica
+    assert an.subcategoria_cac(b2) == "Básica - Grupo 1"
+    assert an.subcategoria_cac(b2 - 1) == "Básica - Grupo 2"
+    assert an.subcategoria_cac(b1) == "Básica - Grupo 2"
+    assert an.subcategoria_cac(b1 - 1) == "Básica - Grupo 3"
+    s = an.subcategoria_cac(pd.Series([10e9, 100e9, 200e9, 400e9, 1e12]))
+    assert list(s) == ["Básica - Grupo 3", "Básica - Grupo 1",
+                       "Intermedia - Grupo 2", "Intermedia - Grupo 1", "Plena"]
+
+
+def test_clasificar_cac_fija_por_periodo_referencia():
+    uvr = an.UVR_DIC_2024
+    t2 = 1_400_000_000 * uvr
+    # ent 1: Básica en dic-2024, crece a Plena en 2026 → debe quedar por dic-2024
+    # ent 2: entra después (solo 2026) → usa su primer período disponible
+    filas = [
+        {"PERIODO": "2024-12", "CODIGO ENTIDAD": 1, "CUENTA": "100000", "VALOR": 10e9},
+        {"PERIODO": "2026-04", "CODIGO ENTIDAD": 1, "CUENTA": "100000", "VALOR": t2 + 1},
+        {"PERIODO": "2026-04", "CODIGO ENTIDAD": 2, "CUENTA": "100000", "VALOR": t2 + 1},
+    ]
+    cl = an.clasificar_cac(pd.DataFrame(filas), ref_periodo="2024-12").set_index("CODIGO ENTIDAD")
+    assert cl.loc[1, "CATEGORIA"] == "Básica"   # por dic-2024, no por 2026
+    assert cl.loc[2, "CATEGORIA"] == "Plena"    # sin dic-2024 → primer período

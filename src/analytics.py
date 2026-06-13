@@ -196,6 +196,68 @@ def categoria_cac(activo, uvr: float = UVR_DIC_2024):
     return "Intermedia" if activo < t2 else "Plena"
 
 
+# Subcategorías de tamaño (capa analítica, no regulatoria) dentro de cada
+# categoría. Fuente única para la UI: categoría → subcategorías de mayor a menor.
+SUBCATEGORIAS = {
+    "Básica": ["Básica - Grupo 1", "Básica - Grupo 2", "Básica - Grupo 3"],
+    "Intermedia": ["Intermedia - Grupo 1", "Intermedia - Grupo 2"],
+    "Plena": ["Plena"],
+}
+
+
+def subcategoria_cac(activo, uvr: float = UVR_DIC_2024):
+    """Subcategoría de tamaño dentro de la categoría regulatoria. Plena no se
+    subdivide. Intermedia: 2 grupos partidos en el punto medio de la banda.
+    Básica: 3 grupos = tercios del tope de Básica. Acepta escalar o Serie."""
+    t1, t2 = (lim * uvr for lim in CAT_LIMITES_UVR)
+    inter_mid = (t1 + t2) / 2          # ~$323 mM
+    b1, b2 = t1 / 3, 2 * t1 / 3        # ~$39.6 mM y ~$79.1 mM
+
+    def _una(a):
+        if a <= t1:  # Básica
+            if a < b1:
+                return "Básica - Grupo 3"
+            return "Básica - Grupo 2" if a < b2 else "Básica - Grupo 1"
+        if a < t2:   # Intermedia
+            return "Intermedia - Grupo 2" if a < inter_mid else "Intermedia - Grupo 1"
+        return "Plena"
+
+    return activo.map(_una) if isinstance(activo, pd.Series) else _una(activo)
+
+
+# Período de referencia de la clasificación. La norma usa los activos a 31-dic
+# del año anterior (Art. 2.11.13.1.2, Parágrafo 1) y la UVR de esa fecha.
+# La clasificación NO se recalcula cada mes: se actualiza manualmente (aquí)
+# cuando la Supersolidaria reclasifique.
+CATEGORIA_REF_PERIODO = "2024-12"
+
+
+def activos_referencia(hist: pd.DataFrame,
+                       ref_periodo: str = CATEGORIA_REF_PERIODO) -> pd.Series:
+    """Activos (cuenta 100000) de cada entidad en el período de referencia.
+    Las que no reportan ahí (entraron después) usan su primer período."""
+    act = (hist[hist["CUENTA"] == "100000"]
+           .pivot_table(index="CODIGO ENTIDAD", columns="PERIODO",
+                        values="VALOR", aggfunc="sum", observed=True))
+    act.columns = act.columns.astype(str)
+    primero = act[sorted(act.columns)].bfill(axis=1).iloc[:, 0]
+    ref = act[ref_periodo] if ref_periodo in act.columns else primero
+    return ref.fillna(primero)
+
+
+def clasificar_cac(hist: pd.DataFrame, ref_periodo: str = CATEGORIA_REF_PERIODO,
+                   uvr: float = UVR_DIC_2024) -> pd.DataFrame:
+    """Clasificación FIJA por entidad (categoría y subcategoría) según los
+    activos del período de referencia. No depende del corte que se visualiza."""
+    ref = activos_referencia(hist, ref_periodo)
+    return pd.DataFrame({
+        "CODIGO ENTIDAD": ref.index,
+        "ACTIVO_REF": ref.values,
+        "CATEGORIA": categoria_cac(ref, uvr).values,
+        "SUBCATEGORIA": subcategoria_cac(ref, uvr).values,
+    })
+
+
 def foto_cac(hist: pd.DataFrame, meta: pd.DataFrame,
              periodo: str | None = None) -> tuple[pd.DataFrame, str]:
     """

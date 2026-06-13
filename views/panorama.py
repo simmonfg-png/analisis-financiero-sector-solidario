@@ -117,7 +117,10 @@ def render():
     corte = sc[0].selectbox("📅 Fecha de corte", periodos, index=0)
 
     foto, _ = an.foto_cac(h, meta, corte)
-    foto["CATEGORIA"] = an.categoria_cac(foto["100000"])
+    # Clasificación FIJA (no depende del corte; ver analytics.CATEGORIA_REF_PERIODO)
+    clasif = data.clasificacion_cac()
+    foto = foto.merge(clasif[["CODIGO ENTIDAD", "CATEGORIA", "SUBCATEGORIA"]],
+                      on="CODIGO ENTIDAD", how="left")
     with st.sidebar:
         st.subheader("Filtros")
         deptos = sorted(foto["DEPARTAMENTO"].dropna().unique())
@@ -129,8 +132,17 @@ def render():
         sel_cat = st.multiselect(
             "Categoría", ["Básica", "Intermedia", "Plena"], default=[],
             help="Por monto de activos (Art. 2.11.13.1.2): Básica ≤ 315M UVR · "
-                 "Intermedia hasta 1.400M UVR · Plena > 1.400M UVR. "
-                 "Umbrales en pesos según la UVR de dic-2024.")
+                 "Intermedia hasta 1.400M UVR · Plena > 1.400M UVR. Clasificación "
+                 "fija con los activos a dic-2024; se actualiza por código.")
+        # las subcategorías disponibles dependen de la categoría elegida
+        cats_sub = sel_cat or ["Básica", "Intermedia", "Plena"]
+        sub_opts = [s for c in ["Básica", "Intermedia", "Plena"] if c in cats_sub
+                    for s in an.SUBCATEGORIAS[c]]
+        sel_sub = st.multiselect(
+            "Subcategoría", sub_opts, default=[],
+            help="Tamaño dentro de la categoría. Intermedia: 2 grupos partidos en "
+                 "el punto medio (~$323 mM). Básica: 3 grupos por tercios del tope "
+                 "(~$39 mM y ~$79 mM). Plena no se subdivide.")
 
     f = foto
     if sel_dep:
@@ -139,6 +151,8 @@ def render():
         f = f[f["MUNICIPIO"].isin(sel_mun)]
     if sel_cat:
         f = f[f["CATEGORIA"].isin(sel_cat)]
+    if sel_sub:
+        f = f[f["SUBCATEGORIA"].isin(sel_sub)]
     if f.empty:
         st.info("Ningún resultado con los filtros elegidos.")
         return

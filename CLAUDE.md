@@ -172,13 +172,23 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Subcategoría + clasificación FIJA**. La categoría ya **no
+  se recalcula con el corte visualizado**: se clasifica una sola vez con los
+  activos del período de referencia `analytics.CATEGORIA_REF_PERIODO` ("2024-12",
+  acorde al Parágrafo 1 del Art. 2.11.13.1.2) y se actualiza por código cuando
+  la Supersolidaria reclasifique. Entidades que entraron después usan su primer
+  período (JURISCOOP Intermedia-G1, COMUNA Básica-G2, CODELCAUCA Básica-G3).
+  Nuevas funciones `subcategoria_cac` (Básica G1/G2/G3 = tercios del tope;
+  Intermedia G1/G2 = punto medio ~$323 mM; Plena sin dividir), `activos_referencia`,
+  `clasificar_cac`; `data.clasificacion_cac()` cacheada. Filtro **Subcategoría**
+  en cascada desde Categoría. Reparto dic-2024: Básica 133 (G3=85), Intermedia
+  43, Plena 8. Tests 26/26.
+
 - **2026-06-13** — **Filtros del Panorama CAC**: se quita "Tipo de CAC" y se
   agregan **Municipio** (depende del departamento elegido) y **Categoría**
   regulatoria (Básica/Intermedia/Plena, Art. 2.11.13.1.2). Nueva función
   `analytics.categoria_cac` con umbrales en UVR (315M y 1.400M) × UVR dic-2024
-  (376.7763) → cortes en pesos $118.684.534.500 y $527.486.820.000. La
-  clasificación usa los activos del corte seleccionado. Tests 24/24. Validado:
-  con "Plena" quedan 9 CAC ($9.7 B).
+  (376.7763) → cortes en pesos $118.684.534.500 y $527.486.820.000. Tests 24/24.
 
 - **2026-06-13** — **Panorama CAC ampliado con cartera/riesgo/rentabilidad**
   (6 pestañas). Nuevas funciones en analytics que aplican el catálogo de
