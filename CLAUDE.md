@@ -176,15 +176,20 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
   índice 2, tras "Principales cifras"). Tres bloques: (1) **gráfico por
   categoría** regulatoria con X fijo Plena→Intermedia→Básica y selector de hasta
   dos métricas (Activo/Pasivo/Patrimonio/Cartera bruta/Depósitos/Aportes/Nº
-  asociados/Nº entidades): la 1ª va al eje Y principal (barras) y la 2ª al eje Y
-  secundario (línea); (2) **gráfico por departamento** (barras horizontales,
-  top 10 según la métrica principal, con la secundaria en eje X superior),
-  depende de las mismas métricas; (3) **tabla de entidades** (Entidad/Sigla/
+  asociados/Nº entidades): la 1ª va al eje Y principal y la 2ª al eje Y
+  secundario, ambas como **barras agrupadas** (offsetgroup + barmode group);
+  (2) **gráfico por departamento** (barras horizontales, **todos** los deptos
+  con scroll vertical dentro de un `st.container(height=480)`, ordenados por la
+  métrica principal, con la secundaria en eje X superior) — va **en la misma
+  fila** que el (1) vía `st.columns(2)`; depende de las mismas métricas;
+  (3) **tabla de entidades** (Entidad/Sigla/
   Asociados/Activos) con selector "Ver" (Todas o por subcategoría) y orden por
   Activos o Nº de asociados, con columna de ranking. Nueva función
   `analytics.agrupaciones_entidad` (aplica el catálogo PUC **por entidad** en un
   corte) para obtener Cartera bruta y Aportes por entidad; el resto de métricas
-  salen de la foto. Tests 27/27.
+  salen de la foto. Los montos se muestran en **miles de millones (mM)**:
+  valores /1e9 y ticks con formato plano (sin la "T"/SI de billones); los
+  conteos no se escalan. Tests 27/27.
 
 - **2026-06-13** — **Principales cifras: Activo/Pasivo/Patrimonio**. En la
   pestaña "Principales cifras" del Panorama CAC se añade la sección "Activo,
