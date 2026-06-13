@@ -69,6 +69,14 @@ def historico_entidades() -> pd.DataFrame:
     return pd.read_parquet(_ruta("historico_entidades.parquet"))
 
 
+@st.cache_data(show_spinner="Calculando panel mensual del sector…")
+def historico_panel() -> pd.DataFrame:
+    """Panel PERIODO × CUENTA del sector CAC completo (saldos sumados sobre
+    todas las entidades). Base para las agrupaciones a nivel sector."""
+    from src import analytics as an
+    return an.panel_mensual(historico())
+
+
 @st.cache_data
 def riesgo_cartera() -> pd.DataFrame:
     _asegurar_datos()

@@ -172,6 +172,20 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Panorama CAC ampliado con cartera/riesgo/rentabilidad**
+  (6 pestañas). Nuevas funciones en analytics que aplican el catálogo de
+  agrupaciones (`agrupaciones.py`) al **panel mensual** del histórico:
+  `panel_mensual` (PERIODO×CUENTA, **rellena NaN con 0** para que las
+  agrupaciones escalares no se contaminen), `serie_alias`, `valor_alias`,
+  `ratio_alias`, `roa_roe` (anualiza el excedente acumulado dividiendo por
+  meses corridos). `data.historico_panel()` cachea el panel del sector.
+  Pestañas: Principales cifras · Balance (composición activo/patrimonio +
+  evolución + por depto/tipo) · Cartera (modalidad + calidad/cobertura
+  mensual, validado: bruta $20.4 B, calidad 8.5%, cobertura 90.3%) ·
+  Depósitos y fondeo (por tipo: CDAT $10 B, vista $3.7 B; depósitos/cartera
+  69%) · Rentabilidad (ROA/ROE anualizados, margen, eficiencia) · Glosario.
+  Tests 23/23. Verificado en navegador.
+
 - **2026-06-13** — **Panorama CAC rediseñado al estilo "Principales cifras"**
   (tablero Superfinanciera). `views/panorama.py`: **selector de fecha de corte**
   (cualquiera de los 100 meses del histórico → recalcula todo vía `foto_cac`),

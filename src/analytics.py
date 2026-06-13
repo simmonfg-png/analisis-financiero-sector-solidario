@@ -192,3 +192,53 @@ def foto_cac(hist: pd.DataFrame, meta: pd.DataFrame,
          .reindex(columns=CUENTAS_FOTO).fillna(0.0))
     w.columns = [str(c) for c in w.columns]
     return w.reset_index().merge(meta, on="CODIGO ENTIDAD", how="left"), per
+
+
+# ── Agrupaciones (catálogo PUC) sobre el histórico mensual ────────────────────
+# El panel PERIODO × CUENTA (saldos del sector sumados) permite aplicar las
+# agrupaciones de `agrupaciones.py` a cualquier mes: snapshot y serie temporal.
+
+def panel_mensual(hist: pd.DataFrame, codigos=None) -> pd.DataFrame:
+    """Panel ancho PERIODO × CUENTA con los saldos sumados sobre las entidades
+    (todas las CAC, o solo las de `codigos`)."""
+    d = hist if codigos is None else hist[hist["CODIGO ENTIDAD"].isin(codigos)]
+    w = d.pivot_table(index="PERIODO", columns="CUENTA", values="VALOR",
+                      aggfunc="sum", observed=True)
+    w.columns = w.columns.astype(str)
+    w.index = w.index.astype(str)
+    # pivot_table deja NaN en (período, cuenta) sin dato; con 0.0 las
+    # agrupaciones escalares (`ag.calcular`) no se contaminan de NaN.
+    return w.fillna(0.0).sort_index()
+
+
+def serie_alias(panel: pd.DataFrame, alias: str) -> pd.Series:
+    """Serie mensual del monto de una agrupación (suma de cuentas del catálogo)."""
+    s = ag.calcular_df(alias, panel)
+    s.index = panel.index
+    return s
+
+
+def valor_alias(panel: pd.DataFrame, periodo: str, alias: str) -> float:
+    """Monto de una agrupación en un período puntual del panel."""
+    if periodo not in panel.index:
+        return float("nan")
+    return float(ag.calcular(alias, panel.loc[periodo].to_dict()))
+
+
+def ratio_alias(panel: pd.DataFrame, num: str, den: str) -> pd.Series:
+    """Serie del cociente num/den (en %) entre dos agrupaciones, protegida."""
+    n, d = serie_alias(panel, num), serie_alias(panel, den)
+    return (n / d * 100).where(d != 0)
+
+
+def roa_roe(panel: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    """ROA y ROE anualizados (%) por período. El excedente del histórico es
+    acumulado del año, así que se anualiza dividiendo por los meses corridos."""
+    exc = serie_alias(panel, "EXCEDENTE")
+    act = serie_alias(panel, "ACTIVOS")
+    pat = serie_alias(panel, "PATRIMONIO")
+    meses = pd.Series([int(p[-2:]) for p in panel.index], index=panel.index)
+    factor = 12 / meses
+    roa = (exc / act * 100 * factor).where(act != 0)
+    roe = (exc / pat * 100 * factor).where(pat != 0)
+    return roa, roe

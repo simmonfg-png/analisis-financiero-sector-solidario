@@ -66,3 +66,64 @@ def test_foto_cac():
     assert f1.loc[2, "140000"] == 0.0  # cuenta sin saldo → 0
     assert "999999" not in foto.columns  # solo cuentas principales
     assert f1.loc[2, "ASOCIADOS"] == 20  # metadato cruzado
+
+
+def _panel_hist():
+    """Histórico de juguete con cuentas de agrupaciones (2 entidades, 2 meses)."""
+    filas = []
+    datos = {  # cuenta -> (ent1, ent2)
+        "210500": (100.0, 50.0),   # AHORRO_VISTA
+        "211000": (80.0, 20.0),    # CDAT bruto
+        "211095": (5.0, 0.0),      # intereses CDAT (se restan en CDAT_NETO)
+        "100000": (1000.0, 500.0), # ACTIVOS
+        "300000": (300.0, 200.0),  # PATRIMONIO
+        "350000": (60.0, 30.0),    # EXCEDENTE
+    }
+    for per in ["2026-03", "2026-06"]:
+        for cta, (v1, v2) in datos.items():
+            filas.append({"PERIODO": per, "CODIGO ENTIDAD": 1, "CUENTA": cta, "VALOR": v1})
+            filas.append({"PERIODO": per, "CODIGO ENTIDAD": 2, "CUENTA": cta, "VALOR": v2})
+    return pd.DataFrame(filas)
+
+
+def test_panel_mensual_y_serie_alias():
+    panel = an.panel_mensual(_panel_hist())
+    assert list(panel.index) == ["2026-03", "2026-06"]
+    # AHORRO_VISTA (210500) = suma de las 2 entidades = 150
+    av = an.serie_alias(panel, "AHORRO_VISTA")
+    assert av.loc["2026-03"] == 150.0
+    # CDAT_NETO = 211000 - 211095 = (80+20) - (5+0) = 95
+    assert an.serie_alias(panel, "CDAT_NETO").loc["2026-06"] == 95.0
+
+
+def test_valor_y_ratio_alias():
+    panel = an.panel_mensual(_panel_hist())
+    assert an.valor_alias(panel, "2026-03", "AHORRO_VISTA") == 150.0
+    assert math.isnan(an.valor_alias(panel, "2099-01", "AHORRO_VISTA"))
+    # DEPOSITOS_NETOS / ACTIVOS: (150 + 95 + 0) / 1500 * 100
+    r = an.ratio_alias(panel, "DEPOSITOS_NETOS", "ACTIVOS")
+    assert math.isclose(r.loc["2026-03"], 245.0 / 1500 * 100)
+
+
+def test_roa_roe_anualizado():
+    panel = an.panel_mensual(_panel_hist())
+    roa, roe = an.roa_roe(panel)
+    # marzo (mes 3): ROA = 90/1500 *100 * 12/3 ; ROE = 90/500 *100 * 12/3
+    assert math.isclose(roa.loc["2026-03"], 90 / 1500 * 100 * 4)
+    assert math.isclose(roe.loc["2026-03"], 90 / 500 * 100 * 4)
+    # junio (mes 6): factor 12/6 = 2
+    assert math.isclose(roa.loc["2026-06"], 90 / 1500 * 100 * 2)
+
+
+def test_panel_sin_nan_en_cuentas_ausentes():
+    # entidad 1 reporta una cuenta extra en un solo período; el panel debe
+    # quedar con 0.0 (no NaN) en el período donde no aparece, para que las
+    # agrupaciones escalares no se contaminen.
+    base = _panel_hist()
+    extra = pd.DataFrame([{"PERIODO": "2026-03", "CODIGO ENTIDAD": 1,
+                           "CUENTA": "146800", "VALOR": 7.0}])  # PROVISIONES_GENERALES
+    panel = an.panel_mensual(pd.concat([base, extra], ignore_index=True))
+    assert panel.loc["2026-06", "146800"] == 0.0  # ausente ese mes → 0, no NaN
+    # valor_alias escalar no devuelve NaN por la cuenta ausente
+    assert an.valor_alias(panel, "2026-06", "PROVISIONES_GENERALES") == 0.0
+    assert an.valor_alias(panel, "2026-03", "PROVISIONES_GENERALES") == 7.0
