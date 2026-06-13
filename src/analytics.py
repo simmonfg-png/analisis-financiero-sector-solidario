@@ -176,6 +176,25 @@ def variacion_anual(serie: pd.Series) -> float:
 
 CUENTAS_FOTO = [A, P, PAT, CART, DEP, EXC]
 
+# Categorías de CAC por monto de activos (Art. 2.11.13.1.2 del Decreto único).
+# Los límites están fijos en UVR; el umbral en pesos = límite × valor de la UVR.
+UVR_DIC_2024 = 376.7763  # UVR al 31-dic-2024 (tabla oficial Supersolidaria)
+CAT_LIMITES_UVR = (315_000_000, 1_400_000_000)  # Básica|Intermedia, Intermedia|Plena
+
+
+def categoria_cac(activo, uvr: float = UVR_DIC_2024):
+    """Categoría regulatoria por monto de activos: Básica / Intermedia / Plena.
+    Acepta un escalar o una Serie. Básica: activos ≤ 315M UVR; Intermedia: hasta
+    < 1.400M UVR; Plena: ≥ 1.400M UVR (umbrales en pesos según la UVR dada)."""
+    t1, t2 = (lim * uvr for lim in CAT_LIMITES_UVR)
+    if isinstance(activo, pd.Series):
+        return pd.Series(np.select([activo <= t1, activo < t2],
+                                    ["Básica", "Intermedia"], default="Plena"),
+                         index=activo.index)
+    if activo <= t1:
+        return "Básica"
+    return "Intermedia" if activo < t2 else "Plena"
+
 
 def foto_cac(hist: pd.DataFrame, meta: pd.DataFrame,
              periodo: str | None = None) -> tuple[pd.DataFrame, str]:

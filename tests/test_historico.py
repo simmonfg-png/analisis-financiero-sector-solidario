@@ -127,3 +127,16 @@ def test_panel_sin_nan_en_cuentas_ausentes():
     # valor_alias escalar no devuelve NaN por la cuenta ausente
     assert an.valor_alias(panel, "2026-06", "PROVISIONES_GENERALES") == 0.0
     assert an.valor_alias(panel, "2026-03", "PROVISIONES_GENERALES") == 7.0
+
+
+def test_categoria_cac():
+    uvr = an.UVR_DIC_2024
+    t1 = 315_000_000 * uvr        # 118.684.534.500
+    t2 = 1_400_000_000 * uvr      # 527.486.820.000
+    assert an.categoria_cac(t1 - 1) == "Básica"
+    assert an.categoria_cac(t1) == "Básica"        # igual o inferior → Básica
+    assert an.categoria_cac(t1 + 1) == "Intermedia"
+    assert an.categoria_cac(t2 - 1) == "Intermedia"
+    assert an.categoria_cac(t2) == "Plena"         # igual o superior → Plena
+    s = an.categoria_cac(pd.Series([1e9, 2e11, 6e11]))
+    assert list(s) == ["Básica", "Intermedia", "Plena"]

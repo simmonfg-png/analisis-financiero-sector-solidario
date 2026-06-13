@@ -172,6 +172,14 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Filtros del Panorama CAC**: se quita "Tipo de CAC" y se
+  agregan **Municipio** (depende del departamento elegido) y **Categoría**
+  regulatoria (Básica/Intermedia/Plena, Art. 2.11.13.1.2). Nueva función
+  `analytics.categoria_cac` con umbrales en UVR (315M y 1.400M) × UVR dic-2024
+  (376.7763) → cortes en pesos $118.684.534.500 y $527.486.820.000. La
+  clasificación usa los activos del corte seleccionado. Tests 24/24. Validado:
+  con "Plena" quedan 9 CAC ($9.7 B).
+
 - **2026-06-13** — **Panorama CAC ampliado con cartera/riesgo/rentabilidad**
   (6 pestañas). Nuevas funciones en analytics que aplican el catálogo de
   agrupaciones (`agrupaciones.py`) al **panel mensual** del histórico:

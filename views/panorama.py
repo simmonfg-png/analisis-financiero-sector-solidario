@@ -117,18 +117,28 @@ def render():
     corte = sc[0].selectbox("📅 Fecha de corte", periodos, index=0)
 
     foto, _ = an.foto_cac(h, meta, corte)
+    foto["CATEGORIA"] = an.categoria_cac(foto["100000"])
     with st.sidebar:
         st.subheader("Filtros")
         deptos = sorted(foto["DEPARTAMENTO"].dropna().unique())
         sel_dep = st.multiselect("Departamento", deptos, default=[])
-        tipos = sorted(foto["TIPO ENTIDAD"].dropna().unique())
-        sel_tipo = st.multiselect("Tipo de CAC", tipos, default=[])
+        # los municipios disponibles dependen del departamento elegido
+        base_mun = foto[foto["DEPARTAMENTO"].isin(sel_dep)] if sel_dep else foto
+        munis = sorted(base_mun["MUNICIPIO"].dropna().unique())
+        sel_mun = st.multiselect("Municipio", munis, default=[])
+        sel_cat = st.multiselect(
+            "Categoría", ["Básica", "Intermedia", "Plena"], default=[],
+            help="Por monto de activos (Art. 2.11.13.1.2): Básica ≤ 315M UVR · "
+                 "Intermedia hasta 1.400M UVR · Plena > 1.400M UVR. "
+                 "Umbrales en pesos según la UVR de dic-2024.")
 
     f = foto
     if sel_dep:
         f = f[f["DEPARTAMENTO"].isin(sel_dep)]
-    if sel_tipo:
-        f = f[f["TIPO ENTIDAD"].isin(sel_tipo)]
+    if sel_mun:
+        f = f[f["MUNICIPIO"].isin(sel_mun)]
+    if sel_cat:
+        f = f[f["CATEGORIA"].isin(sel_cat)]
     if f.empty:
         st.info("Ningún resultado con los filtros elegidos.")
         return
