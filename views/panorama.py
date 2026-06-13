@@ -14,7 +14,7 @@ import streamlit as st
 
 from src import analytics as an
 from src import data
-from src.format import GLOSARIO, cantidad, miles, pesos, pct
+from src.format import GLOSARIO, miles, pesos, pct
 
 PALETA = px.colors.qualitative.Set2
 
@@ -191,30 +191,6 @@ def render():
 
     # ── TAB 1 · Principales cifras ──────────────────────────────────────────────
     with tabs[0]:
-        hero = st.columns(3)
-        _hero(hero[0], "Activos totales", pesos(f["100000"].sum()), C_ACT, delta("100000"))
-        _hero(hero[1], "Cartera de créditos", pesos(f["140000"].sum()), C_CAR, delta("140000"))
-        _hero(hero[2], "Depósitos", pesos(f["210000"].sum()), C_DEP, delta("210000"))
-        st.divider()
-
-        k = st.columns(4)
-        k[0].metric("Patrimonio", pesos(f["300000"].sum()), delta=delta("300000"))
-        k[1].metric("Pasivos", pesos(f["200000"].sum()), delta=delta("200000"))
-        k[2].metric("Excedentes", pesos(f["350000"].sum()),
-                    help="Excedentes y/o pérdidas acumuladas del ejercicio")
-        solv = f["300000"].sum() / f["100000"].sum() * 100 if f["100000"].sum() else 0
-        k[3].metric("Solvencia", pct(solv), help="Patrimonio / Activo")
-        k = st.columns(4)
-        k[0].metric("Cooperativas", miles(len(f)))
-        k[1].metric("Asociados", cantidad(f["ASOCIADOS"].sum()),
-                    help="Del reporte de cuentas principales (corte marzo 2026)")
-        k[2].metric("Cartera / Activo",
-                    pct(f["140000"].sum() / f["100000"].sum() * 100 if f["100000"].sum() else 0))
-        k[3].metric("Depósitos / Activo",
-                    pct(f["210000"].sum() / f["100000"].sum() * 100 if f["100000"].sum() else 0))
-        st.caption(GLOSARIO)
-
-        st.divider()
         st.subheader("Activo, Pasivo y Patrimonio")
         m = st.columns(3)
         m[0].metric("Activo total", pesos(f["100000"].sum()), delta=delta("100000"))
