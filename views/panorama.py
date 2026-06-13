@@ -361,21 +361,21 @@ def render():
                 x2 = [float(d2.get(d, 0)) for d in deps]
                 figd.add_trace(go.Bar(y=deps, x=_esc(m2, x2), orientation="h", name=m2,
                                       marker_color=C_PAT, offsetgroup=0, alignmentgroup="g",
-                                      text=_txt(m2, x2), textposition="inside",
-                                      insidetextanchor="start",
-                                      textfont=dict(color="white"), xaxis="x2"))
+                                      text=_txt(m2, x2), textposition="auto",
+                                      insidetextanchor="start", xaxis="x2"))
                 figd.update_layout(xaxis2=dict(overlaying="x", side="top",
                                                showticklabels=False, showgrid=False))
             figd.add_trace(go.Bar(y=deps, x=_esc(m1, x1), orientation="h", name=m1,
                                   marker_color=C_ACT, offsetgroup=1, alignmentgroup="g",
-                                  text=_txt(m1, x1), textposition="inside",
-                                  insidetextanchor="start", textfont=dict(color="white")))
+                                  text=_txt(m1, x1), textposition="auto",
+                                  insidetextanchor="start"))
             figd.update_layout(xaxis=dict(showticklabels=False, showgrid=False))
             # alto generoso (≈34 px por depto) para que el contenedor permita scroll;
             # la leyenda se omite porque el gráfico de la izquierda ya la muestra.
-            alto = max(440, 34 * len(deps))
-            figd.update_layout(barmode="group", showlegend=False, height=alto,
-                               margin=dict(l=0, r=10, t=10, b=0))
+            alto = max(440, 46 * len(deps))
+            figd.update_layout(barmode="group", bargap=0.12, bargroupgap=0,
+                               showlegend=False, height=alto,
+                               margin=dict(l=0, r=20, t=10, b=0))
             with st.container(height=480):
                 st.plotly_chart(figd, width="stretch")
 
