@@ -172,6 +172,14 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-13** — **Principales cifras: Activo/Pasivo/Patrimonio**. En la
+  pestaña "Principales cifras" del Panorama CAC se añade la sección "Activo,
+  Pasivo y Patrimonio" con tres métricas (total + variación 12M) y dos gráficas:
+  barras agrupadas por **cierre de año** (diciembres del histórico + el corte
+  seleccionado si no es diciembre, etiquetado p.ej. "2026·abr") y líneas
+  **trimestrales** (marzo/junio/sep/dic). Nuevo helper `_etiqueta_periodo` en
+  `views/panorama.py`. Respeta filtros y fecha de corte. Tests 27/27.
+
 - **2026-06-13** — **Subcategoría + clasificación FIJA**. La categoría ya **no
   se recalcula con el corte visualizado**: se clasifica una sola vez con los
   activos del período de referencia `analytics.CATEGORIA_REF_PERIODO` ("2024-12",

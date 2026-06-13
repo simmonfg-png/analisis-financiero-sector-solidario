@@ -53,6 +53,15 @@ PATRIMONIO_COMP = [
 ]
 
 
+_MESES = {"03": "mar", "06": "jun", "09": "sep", "12": "dic"}
+
+
+def _etiqueta_periodo(periodo):
+    """'2024-12' → '2024'; cortes intermedios → '2026·mar' (para el eje de barras)."""
+    anio, mes = periodo.split("-")
+    return anio if mes == "12" else f"{anio}·{_MESES.get(mes, mes)}"
+
+
 def _hero(col, label, value, color, sub=None):
     col.markdown(
         f"<div style='line-height:1.15'>"
@@ -204,6 +213,47 @@ def render():
         k[3].metric("Depósitos / Activo",
                     pct(f["210000"].sum() / f["100000"].sum() * 100 if f["100000"].sum() else 0))
         st.caption(GLOSARIO)
+
+        st.divider()
+        st.subheader("Activo, Pasivo y Patrimonio")
+        m = st.columns(3)
+        m[0].metric("Activo total", pesos(f["100000"].sum()), delta=delta("100000"))
+        m[1].metric("Pasivo total", pesos(f["200000"].sum()), delta=delta("200000"))
+        m[2].metric("Patrimonio total", pesos(f["300000"].sum()), delta=delta("300000"))
+
+        bal = serie[["100000", "200000", "300000"]].rename(
+            columns={"100000": "Activo", "200000": "Pasivo", "300000": "Patrimonio"})
+        RUBROS = ["Activo", "Pasivo", "Patrimonio"]
+        SEQ = [C_ACT, C_PAT, C_DEP]
+
+        a1, a2 = st.columns(2)
+        with a1:
+            st.markdown("**Cierres de año** (y último corte)")
+            cierres = [p for p in bal.index if p.endswith("-12")]
+            if corte not in cierres:
+                cierres.append(corte)
+            anual = bal.loc[sorted(set(cierres))].reset_index()
+            anual["Periodo"] = anual["PERIODO"].map(_etiqueta_periodo)
+            largo = anual.melt(id_vars=["PERIODO", "Periodo"], value_vars=RUBROS,
+                               var_name="Rubro", value_name="VALOR")
+            fig = px.bar(largo, x="Periodo", y="VALOR", color="Rubro", barmode="group",
+                         color_discrete_sequence=SEQ,
+                         labels={"Periodo": "", "VALOR": "Saldo (COP)"})
+            fig.update_layout(height=360, margin=dict(l=0, r=0, t=10, b=0),
+                              legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(fig, width="stretch")
+        with a2:
+            st.markdown("**Evolución trimestral**")
+            trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
+            trim = bal.loc[trims].reset_index()
+            largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
+                              var_name="Rubro", value_name="VALOR")
+            fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro", markers=True,
+                          color_discrete_sequence=SEQ,
+                          labels={"PERIODO": "", "VALOR": "Saldo (COP)"})
+            fig.update_layout(height=360, margin=dict(l=0, r=0, t=10, b=0),
+                              legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(fig, width="stretch")
 
         st.divider()
         g3, g4 = st.columns([3, 2])
