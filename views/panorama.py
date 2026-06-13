@@ -377,7 +377,7 @@ def render():
                                       marker_color=color, offsetgroup=i, alignmentgroup="g",
                                       text=[f"<b>{t}</b>" for t in _txt(m, x)],
                                       textposition="auto", insidetextanchor="start",
-                                      textfont=dict(size=14), xaxis=eje))
+                                      textangle=0, textfont=dict(size=14), xaxis=eje))
             figd.update_layout(xaxis=dict(showticklabels=False, showgrid=False))
             if usa_sec:
                 figd.update_layout(xaxis2=dict(overlaying="x", side="top",
