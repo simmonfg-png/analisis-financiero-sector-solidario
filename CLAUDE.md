@@ -172,6 +172,22 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Principales cifras rediseñada** (`views/panorama.py`, TAB 1).
+  Título de la sección → **"Estructura Financiera"** con subheader *"Cifras
+  Financieras Expresadas en Millones de Pesos Colombianos"*. Las tres métricas
+  pierden el sufijo "total" (Activo/Pasivo/Patrimonio) y se muestran en
+  **millones de pesos** (÷1e6, separador de miles) **sin delta de variación
+  12M**. Se **elimina el gráfico de barras** (cierres de año) y queda solo la
+  **evolución trimestral** a ancho completo: línea **sin marcadores** +
+  **línea-guía vertical punteada** (`hovermode="x unified"` + spikes en X) que
+  al señalar muestra los tres valores en el punto. Nuevas **dos tablas de
+  variaciones**: (1) resumen del corte (Saldo en millones · Var. anual 12 m ·
+  Año corrido vs. último cierre de diciembre) y (2) crecimiento anual histórico
+  (% entre cierres de diciembre por rubro + fila del año corrido). Helpers
+  locales `_mill`/`_pctv`/`_var`. Nuevo import `pandas as pd`. Verificado en
+  navegador vía DOM (tablas y trazas correctas; la captura headless de Plotly
+  se cuelga, sin errores en consola).
+
 - **2026-06-13** — **Pestaña "Sector"** en el Panorama CAC (`views/panorama.py`,
   índice 2, tras "Principales cifras"). Tres bloques: (1) **gráfico por
   categoría** regulatoria con X fijo Plena→Intermedia→Básica y selector de hasta

@@ -9,6 +9,7 @@ principales solo se usa ASOCIADOS y los metadatos de identificación.
 """
 from __future__ import annotations
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -232,45 +233,77 @@ def render():
 
     # ── TAB 1 · Principales cifras ──────────────────────────────────────────────
     with tabs[0]:
-        st.subheader("Activo, Pasivo y Patrimonio")
+        st.subheader("Estructura Financiera")
+        st.caption("Cifras Financieras Expresadas en Millones de Pesos Colombianos")
+
+        def _mill(v):  # monto en millones de pesos, con separador de miles
+            return "—" if v is None or v != v else f"{v / 1e6:,.0f}"
+
+        def _pctv(v):  # variación porcentual con signo
+            return "—" if v is None or v != v else f"{v:+.1f}%"
+
         m = st.columns(3)
-        m[0].metric("Activo total", pesos(f["100000"].sum()), delta=delta("100000"))
-        m[1].metric("Pasivo total", pesos(f["200000"].sum()), delta=delta("200000"))
-        m[2].metric("Patrimonio total", pesos(f["300000"].sum()), delta=delta("300000"))
+        m[0].metric("Activo", _mill(f["100000"].sum()))
+        m[1].metric("Pasivo", _mill(f["200000"].sum()))
+        m[2].metric("Patrimonio", _mill(f["300000"].sum()))
 
         bal = serie[["100000", "200000", "300000"]].rename(
             columns={"100000": "Activo", "200000": "Pasivo", "300000": "Patrimonio"})
         RUBROS = ["Activo", "Pasivo", "Patrimonio"]
         SEQ = [C_ACT, C_PAT, C_DEP]
 
-        a1, a2 = st.columns(2)
-        with a1:
-            st.markdown("**Cierres de año** (y último corte)")
-            cierres = [p for p in bal.index if p.endswith("-12")]
-            if corte not in cierres:
-                cierres.append(corte)
-            anual = bal.loc[sorted(set(cierres))].reset_index()
-            anual["Periodo"] = anual["PERIODO"].map(_etiqueta_periodo)
-            largo = anual.melt(id_vars=["PERIODO", "Periodo"], value_vars=RUBROS,
-                               var_name="Rubro", value_name="VALOR")
-            fig = px.bar(largo, x="Periodo", y="VALOR", color="Rubro", barmode="group",
-                         color_discrete_sequence=SEQ,
-                         labels={"Periodo": "", "VALOR": "Saldo (COP)"})
-            fig.update_layout(height=360, margin=dict(l=0, r=0, t=10, b=0),
-                              legend=dict(orientation="h", y=-0.18))
-            st.plotly_chart(fig, width="stretch")
-        with a2:
-            st.markdown("**Evolución trimestral**")
-            trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
-            trim = bal.loc[trims].reset_index()
-            largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
-                              var_name="Rubro", value_name="VALOR")
-            fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro", markers=True,
-                          color_discrete_sequence=SEQ,
-                          labels={"PERIODO": "", "VALOR": "Saldo (COP)"})
-            fig.update_layout(height=360, margin=dict(l=0, r=0, t=10, b=0),
-                              legend=dict(orientation="h", y=-0.18))
-            st.plotly_chart(fig, width="stretch")
+        # ── Evolución trimestral (línea sin marcadores + línea-guía al señalar) ──
+        st.markdown("**Evolución trimestral** (millones COP)")
+        trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
+        trim = (bal.loc[trims] / 1e6).reset_index()
+        largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
+                          var_name="Rubro", value_name="VALOR")
+        fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
+                      color_discrete_sequence=SEQ,
+                      labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
+        fig.update_traces(hovertemplate="%{y:,.0f}<extra></extra>")
+        # Línea-guía vertical punteada que cruza la gráfica y muestra los tres
+        # valores (Activo/Pasivo/Patrimonio) en el punto señalado.
+        fig.update_xaxes(showspikes=True, spikemode="across", spikedash="dot",
+                         spikecolor="#888", spikethickness=1, spikesnap="cursor")
+        fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
+                          hovermode="x unified",
+                          legend=dict(orientation="h", y=-0.18))
+        st.plotly_chart(fig, width="stretch")
+
+        # ── Variaciones (tabla resumen) ─────────────────────────────────────────
+        st.markdown("**Variaciones**")
+        last = bal.index[-1]
+        anio = int(last[:4])
+        base_12m = f"{anio - 1}-{last[5:]}"      # mismo mes del año anterior
+        base_ytd = f"{anio - 1}-12"              # último cierre anual
+
+        def _var(col, base):
+            if base in bal.index and bal.at[base, col]:
+                return (bal.at[last, col] / bal.at[base, col] - 1) * 100
+            return float("nan")
+
+        resumen = pd.DataFrame({
+            "Saldo (millones)": {r: _mill(bal.at[last, r]) for r in RUBROS},
+            "Var. anual (12 m)": {r: _pctv(_var(r, base_12m)) for r in RUBROS},
+            "Año corrido (vs. último cierre)": {r: _pctv(_var(r, base_ytd)) for r in RUBROS},
+        })
+        st.table(resumen)
+        st.caption(f"Variación anual: corte **{last}** frente a **{base_12m}** · "
+                   f"Año corrido: frente al último cierre anual **{base_ytd}**.")
+
+        # ── Crecimiento anual histórico por rubro ───────────────────────────────
+        st.markdown("**Crecimiento anual histórico** (% de variación entre cierres de diciembre)")
+        cierres = sorted(p for p in bal.index if p.endswith("-12"))
+        filas = {}
+        for prev, cur in zip(cierres, cierres[1:]):
+            filas[cur[:4]] = {r: _pctv((bal.at[cur, r] / bal.at[prev, r] - 1) * 100)
+                              if bal.at[prev, r] else "—" for r in RUBROS}
+        if not last.endswith("-12") and base_ytd in bal.index:
+            filas[f"{_etiqueta_periodo(last)} (corrido)"] = {
+                r: _pctv(_var(r, base_ytd)) for r in RUBROS}
+        if filas:
+            st.table(pd.DataFrame(filas).T[RUBROS])
 
     # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
