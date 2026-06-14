@@ -290,12 +290,16 @@ def render():
             format_func=_mes_corto)
         vis = [p for p in meses if ini <= p <= fin]
 
-        # Eje X en español: categoría = nombre completo (encabezado del tooltip),
-        # ticks abreviados (~12) para no saturar. El orden lo fija categoryarray.
+        # Eje X en español: categoría = nombre completo del mes (encabezado del
+        # tooltip); el eje muestra SOLO el año (un tick por año, en su primer mes
+        # visible). El orden de la categoría lo fija categoryarray.
         x_largo = [_mes_largo(p) for p in vis]
-        paso = max(1, len(vis) // 12)
-        tickvals = [x_largo[i] for i in range(0, len(vis), paso)]
-        ticktext = [_mes_corto(vis[i]) for i in range(0, len(vis), paso)]
+        tickvals, ticktext, _aniovistos = [], [], set()
+        for p in vis:
+            if p[:4] not in _aniovistos:
+                _aniovistos.add(p[:4])
+                tickvals.append(_mes_largo(p))
+                ticktext.append(p[:4])
 
         def _eje_meses(fig):
             fig.update_xaxes(categoryorder="array", categoryarray=x_largo,
