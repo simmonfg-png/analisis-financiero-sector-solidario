@@ -258,32 +258,6 @@ def render():
                               legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig, width="stretch")
 
-        st.divider()
-        g3, g4 = st.columns([3, 2])
-        with g3:
-            st.subheader("Mayores cooperativas por activos")
-            top = (f.sort_values("100000", ascending=False)
-                   .head(15)[["ENTIDAD", "SIGLA", "DEPARTAMENTO", "ASOCIADOS", "100000"]]
-                   .rename(columns={"100000": "Activos"}))
-            top["Activos"] = top["Activos"].map(pesos)
-            top["ASOCIADOS"] = top["ASOCIADOS"].map(miles)
-            st.dataframe(top, width="stretch", hide_index=True)
-        with g4:
-            st.subheader("Concentración de activos")
-            ff = f.sort_values("100000", ascending=False).reset_index(drop=True)
-            total = ff["100000"].sum()
-            filas = [{"Tramo": etq, "% activos":
-                      ff.head(n)["100000"].sum() / total * 100 if total else 0}
-                     for etq, n in {"Top 10": 10, "Top 25": 25, "Top 50": 50}.items()]
-            conc = px.bar(filas, x="Tramo", y="% activos", text="% activos",
-                          color_discrete_sequence=PALETA)
-            conc.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-            conc.update_layout(height=300, yaxis_range=[0, 100], margin=dict(t=10))
-            st.plotly_chart(conc, width="stretch")
-            n_top = next((i + 1 for i in range(len(ff))
-                          if ff.head(i + 1)["100000"].sum() >= total / 2), len(ff))
-            st.info(f"El **50% de los activos** está en **{n_top}** cooperativas de {len(ff):,}.")
-
     # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
         opciones = list(METRICAS_SECTOR.keys())
