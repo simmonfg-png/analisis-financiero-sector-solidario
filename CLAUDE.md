@@ -172,6 +172,16 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Meses en español en las gráficas de Principales cifras**
+  (`views/panorama.py`, TAB 1). Plotly de Streamlit no trae el locale es, así que
+  las etiquetas se construyen a mano: el eje X usa la categoría = **nombre
+  completo del mes** (`_mes_largo`, p. ej. "Octubre 2023") —que es lo que muestra
+  el encabezado del tooltip unificado— y los **ticks** se abrevian (`_mes_corto`,
+  "Oct 2023", ~12 ticks vía `tickvals`/`ticktext`). El `select_slider` de la línea
+  de tiempo usa `format_func=_mes_corto`. Nuevos mapas `_MES_LARGO`/`_MES_CORTO`
+  y helpers `_mes_largo`/`_mes_corto`. (Tooltips ya en formato colombiano por
+  `separators=",."` + `$`.)
+
 - **2026-06-14** — **Formato colombiano en Principales cifras**
   (`views/panorama.py`, TAB 1). Las métricas de valores y la tabla muestran el
   símbolo **$**, **punto** para miles y **coma** para decimales (p. ej.

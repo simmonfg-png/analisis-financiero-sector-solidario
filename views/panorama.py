@@ -80,6 +80,23 @@ def _agrega_metrica(df, grupo_col, metrica):
 
 _MESES = {"03": "mar", "06": "jun", "09": "sep", "12": "dic"}
 
+# Nombres de mes en español (Plotly de Streamlit no trae el locale es).
+_MES_LARGO = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo",
+              6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre",
+              10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
+_MES_CORTO = {1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
+              7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"}
+
+
+def _mes_largo(periodo):
+    """'2022-12' → 'Diciembre 2022' (encabezado del tooltip)."""
+    return f"{_MES_LARGO[int(periodo[5:])]} {periodo[:4]}"
+
+
+def _mes_corto(periodo):
+    """'2022-12' → 'Dic 2022' (etiqueta del eje)."""
+    return f"{_MES_CORTO[int(periodo[5:])]} {periodo[:4]}"
+
 
 def _etiqueta_periodo(periodo):
     """'2024-12' → '2024'; cortes intermedios → '2026·mar' (para el eje de barras)."""
@@ -268,24 +285,38 @@ def render():
 
         # ── Línea de tiempo compartida + dos gráficas lado a lado ───────────────
         meses = list(bal.index)  # todos los meses del histórico
-        ini, fin = st.select_slider("Línea de tiempo", options=meses,
-                                    value=(meses[0], meses[-1]))
+        ini, fin = st.select_slider(
+            "Línea de tiempo", options=meses, value=(meses[0], meses[-1]),
+            format_func=_mes_corto)
         vis = [p for p in meses if ini <= p <= fin]
+
+        # Eje X en español: categoría = nombre completo (encabezado del tooltip),
+        # ticks abreviados (~12) para no saturar. El orden lo fija categoryarray.
+        x_largo = [_mes_largo(p) for p in vis]
+        paso = max(1, len(vis) // 12)
+        tickvals = [x_largo[i] for i in range(0, len(vis), paso)]
+        ticktext = [_mes_corto(vis[i]) for i in range(0, len(vis), paso)]
+
+        def _eje_meses(fig):
+            fig.update_xaxes(categoryorder="array", categoryarray=x_largo,
+                             tickmode="array", tickvals=tickvals, ticktext=ticktext,
+                             showspikes=True, spikemode="across", spikethickness=1,
+                             spikecolor="#888", spikedash="solid", spikesnap="cursor")
 
         g1, g2 = st.columns(2)
         with g1:
             st.markdown("**Evolución mensual** (millones COP)")
             trim = (bal.loc[vis, RUBROS] / 1e6).reset_index()
-            largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
+            trim["Mes"] = trim["PERIODO"].map(_mes_largo)
+            largo = trim.melt(id_vars=["PERIODO", "Mes"], value_vars=RUBROS,
                               var_name="Rubro", value_name="VALOR")
-            fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
+            fig = px.line(largo, x="Mes", y="VALOR", color="Rubro",
                           color_discrete_sequence=SEQ,
-                          labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
+                          labels={"Mes": "", "VALOR": "Saldo (millones COP)"})
             # Tooltip unificado: marcador de color + nombre del rubro + valor del mes.
             # separators=",." → formato colombiano (coma decimal, punto de miles).
             fig.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
-            fig.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
-                             spikecolor="#888", spikedash="solid", spikesnap="cursor")
+            _eje_meses(fig)
             fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
                               hovermode="x unified", separators=",.",
                               legend=dict(orientation="h", y=-0.18))
@@ -293,14 +324,14 @@ def render():
         with g2:
             st.markdown("**Estructura relativa** (% del activo)")
             rel = bal.loc[vis, RATIOS].reset_index()
-            largo2 = rel.melt(id_vars="PERIODO", value_vars=RATIOS,
+            rel["Mes"] = rel["PERIODO"].map(_mes_largo)
+            largo2 = rel.melt(id_vars=["PERIODO", "Mes"], value_vars=RATIOS,
                               var_name="Indicador", value_name="VALOR")
-            fig2 = px.line(largo2, x="PERIODO", y="VALOR", color="Indicador",
+            fig2 = px.line(largo2, x="Mes", y="VALOR", color="Indicador",
                            color_discrete_sequence=[C_PAT, C_DEP],
-                           labels={"PERIODO": "", "VALOR": "% del activo"})
+                           labels={"Mes": "", "VALOR": "% del activo"})
             fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f} %<extra></extra>")
-            fig2.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
-                              spikecolor="#888", spikedash="solid", spikesnap="cursor")
+            _eje_meses(fig2)
             fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
                                hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
