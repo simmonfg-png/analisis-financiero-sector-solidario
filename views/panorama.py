@@ -375,7 +375,7 @@ def render():
         mc[0].metric("Cartera bruta", _mill(va("CARTERA_BRUTA")))
         mc[1].metric("Depósitos", _mill(f["210000"].sum()))
         mc[2].metric("Capital social", _mill(va("CAPITAL_SOCIAL")))
-        mc[3].metric("Obligaciones financieras", _mill(va("OBLIGACIONES_FINANCIERAS")))
+        mc[3].metric("Excedentes", _mill(f["350000"].sum()))
         mc[4].metric("Base social (asociados)", _num(f["ASOCIADOS"].sum()))
 
         # Series mensuales: cartera y capital desde las agrupaciones; depósitos
