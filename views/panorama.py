@@ -747,9 +747,9 @@ def render():
                                  hovertemplate="%{fullData.name}: %{y:.2f} %<extra></extra>"),
                       secondary_y=True)
         fig.update_yaxes(title_text="Calidad por riesgo (%)", color=C_CAR,
-                         secondary_y=False, rangemode="tozero")
+                         secondary_y=False, rangemode="normal")
         fig.update_yaxes(title_text="Cobertura por riesgo (%)", color=C_DEP,
-                         secondary_y=True, rangemode="tozero")
+                         secondary_y=True, rangemode="normal")
         _eje_meses(fig, per)
         fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=28),
                           hovermode="x unified", separators=",.",
