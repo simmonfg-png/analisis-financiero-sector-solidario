@@ -342,30 +342,9 @@ def render():
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
 
-        last = bal.index[-1]
-        base_ytd = f"{int(last[:4]) - 1}-12"     # último cierre anual
-
-        def _var(col, base):
-            if base in bal.index and bal.at[base, col]:
-                return (bal.at[last, col] / bal.at[base, col] - 1) * 100
-            return float("nan")
-
-        # ── Crecimiento anual histórico por rubro ───────────────────────────────
-        st.markdown("**Crecimiento anual histórico** (% de variación entre cierres de diciembre)")
-        cierres = sorted(p for p in bal.index if p.endswith("-12"))
-        filas = {}
-        for prev, cur in zip(cierres, cierres[1:]):
-            filas[cur[:4]] = {r: _pctv((bal.at[cur, r] / bal.at[prev, r] - 1) * 100)
-                              if bal.at[prev, r] else "—" for r in RUBROS}
-        if not last.endswith("-12") and base_ytd in bal.index:
-            filas[f"{_etiqueta_periodo(last)} (corrido)"] = {
-                r: _pctv(_var(r, base_ytd)) for r in RUBROS}
-        if filas:
-            st.table(pd.DataFrame(filas).T[RUBROS])
-
-        # ── Cartera, depósitos, capital y base social ───────────────────────────
+        # ── Actividad Financiera (cartera, depósitos, capital, excedentes) ──────
         st.divider()
-        st.subheader("Cartera, Depósitos y Base Social")
+        st.subheader("Actividad Financiera")
         st.caption("Cifras Financieras Expresadas en Millones de Pesos Colombianos")
 
         def _num(v):  # conteo con separador de miles colombiano (punto)
@@ -378,8 +357,20 @@ def render():
         mc[3].metric("Excedentes", _mill(f["350000"].sum()))
         mc[4].metric("Base social (asociados)", _num(f["ASOCIADOS"].sum()))
 
-        # Series mensuales: cartera y capital desde las agrupaciones; depósitos
-        # desde la cuenta 210000 del histórico.
+        # Serie de asociados: hoy solo el dato del corte; al cargar el histórico
+        # (parquet PERIODO·CODIGO ENTIDAD·ASOCIADOS) la serie se llena sola.
+        if data.historico_asociados_disponible():
+            ha = data.historico_asociados()
+            if filtrado:
+                ha = ha[ha["CODIGO ENTIDAD"].isin(f["CODIGO ENTIDAD"])]
+            aso = ha.groupby("PERIODO")["ASOCIADOS"].sum()
+            aso.index = aso.index.astype(str)
+            aso = aso[aso.index <= corte].sort_index()
+        else:
+            aso = pd.Series({corte: float(f["ASOCIADOS"].sum())})
+
+        # Series mensuales: cartera y capital desde las agrupaciones; depósitos y
+        # excedentes desde las cuentas 210000 y 350000 del histórico.
         finser = pd.DataFrame({
             "Cartera bruta": an.serie_alias(panel, "CARTERA_BRUTA"),
             "Depósitos": serie["210000"],
@@ -387,10 +378,16 @@ def render():
         })
         FIN = ["Cartera bruta", "Depósitos", "Capital social"]
 
+        # Línea de tiempo propia de esta sección (independiente de la de arriba).
+        ini2, fin2 = st.select_slider("Línea de tiempo", options=meses,
+                                      value=(meses[0], meses[-1]),
+                                      format_func=_mes_corto, key="lt_actividad")
+        vis2 = [p for p in meses if ini2 <= p <= fin2]
+
         h1, h2 = st.columns(2)
         with h1:
             st.markdown("**Cifras financieras** (millones COP)")
-            d = (finser.loc[vis, FIN] / 1e6).reset_index()
+            d = (finser.loc[vis2, FIN] / 1e6).reset_index()
             d["Mes"] = d["PERIODO"].map(_mes_largo)
             largo3 = d.melt(id_vars=["PERIODO", "Mes"], value_vars=FIN,
                             var_name="Concepto", value_name="VALOR")
@@ -398,26 +395,14 @@ def render():
                            color_discrete_sequence=[C_CAR, C_DEP, C_ACT],
                            labels={"Mes": "", "VALOR": "Saldo (millones COP)"})
             figf.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
-            _eje_meses(figf, vis)
+            _eje_meses(figf, vis2)
             figf.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
                                hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(figf, width="stretch")
         with h2:
             st.markdown("**Base social** (número de asociados)")
-            # Por ahora solo se tiene el dato del corte; al cargar el histórico de
-            # asociados (parquet PERIODO·CODIGO ENTIDAD·ASOCIADOS), esta serie se
-            # llenará y la gráfica se extenderá sola.
-            if data.historico_asociados_disponible():
-                ha = data.historico_asociados()
-                if filtrado:
-                    ha = ha[ha["CODIGO ENTIDAD"].isin(f["CODIGO ENTIDAD"])]
-                aso = ha.groupby("PERIODO")["ASOCIADOS"].sum()
-                aso.index = aso.index.astype(str)
-                aso = aso[aso.index <= corte].sort_index()
-            else:
-                aso = pd.Series({corte: float(f["ASOCIADOS"].sum())})
-            da = aso.reset_index()
+            da = aso[aso.index.isin(vis2)].reset_index()
             da.columns = ["PERIODO", "Asociados"]
             da["Mes"] = da["PERIODO"].map(_mes_largo)
             figa = px.line(da, x="Mes", y="Asociados", markers=True,
@@ -429,10 +414,43 @@ def render():
                                hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(figa, width="stretch")
-            if len(da) <= 1:
+            if len(aso) <= 1:
                 st.caption(f"Por ahora solo está disponible el dato del corte "
                            f"(**{_mes_largo(corte)}**). El histórico de asociados "
                            "se añadirá cuando se cargue.")
+
+        # ── Crecimiento anual histórico (al final, todos los rubros) ─────────────
+        st.divider()
+        st.markdown("**Crecimiento anual histórico** "
+                    "(% de variación entre cierres de diciembre)")
+        tser = pd.DataFrame({
+            "Activo": bal["Activo"], "Pasivo": bal["Pasivo"], "Patrimonio": bal["Patrimonio"],
+            "Cartera bruta": finser["Cartera bruta"], "Depósitos": finser["Depósitos"],
+            "Capital social": finser["Capital social"], "Excedentes": serie["350000"],
+            "Base social": aso.reindex(bal.index),
+        })
+        COLS = ["Activo", "Pasivo", "Patrimonio", "Cartera bruta", "Depósitos",
+                "Capital social", "Excedentes", "Base social"]
+        last = bal.index[-1]
+        base_ytd = f"{int(last[:4]) - 1}-12"     # último cierre anual
+        cierres = sorted(p for p in tser.index if p.endswith("-12"))
+
+        def _crec(col, prev, cur):
+            a, b = tser.at[prev, col], tser.at[cur, col]
+            if pd.isna(a) or pd.isna(b) or a == 0:
+                return "—"
+            return _pctv((b / a - 1) * 100)
+
+        filas = {}
+        for prev, cur in zip(cierres, cierres[1:]):
+            filas[cur[:4]] = {c: _crec(c, prev, cur) for c in COLS}
+        if not last.endswith("-12") and base_ytd in tser.index:
+            filas[f"{_etiqueta_periodo(last)} (corrido)"] = {
+                c: _crec(c, base_ytd, last) for c in COLS}
+        if filas:
+            st.table(pd.DataFrame(filas).T[COLS])
+            st.caption("La fila *(corrido)* compara el último corte frente al "
+                       "último cierre de diciembre (año corrido).")
 
     # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
