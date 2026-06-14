@@ -731,14 +731,22 @@ def render():
                     + an.serie_alias(panel, "PROVISIONES_GENERALES"))
         riesgo_ser = an.serie_alias(panel, "CARTERA_RIESGO_CAPITAL")
         cobertura = (prov_ser / riesgo_ser * 100).where(riesgo_ser != 0)
-        comp = calidad.to_frame("Calidad por riesgo")
-        comp["Cobertura por riesgo"] = cobertura
-        largo = comp.reset_index().melt(id_vars="PERIODO", var_name="Indicador",
-                                        value_name="pct")
-        fig = px.line(largo, x="PERIODO", y="pct", color="Indicador",
-                      color_discrete_sequence=[C_CAR, C_DEP],
-                      labels={"PERIODO": "", "pct": "%"})
+        # Doble eje: calidad (~8%) a la izquierda, cobertura (~90%) a la derecha,
+        # para que ambas series sean legibles pese a su escala distinta.
+        per = list(calidad.index)
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.add_trace(go.Scatter(x=per, y=calidad.values, name="Calidad por riesgo",
+                                 mode="lines", line=dict(color=C_CAR, width=2)),
+                      secondary_y=False)
+        fig.add_trace(go.Scatter(x=per, y=cobertura.values, name="Cobertura por riesgo",
+                                 mode="lines", line=dict(color=C_DEP, width=2)),
+                      secondary_y=True)
+        fig.update_yaxes(title_text="Calidad por riesgo (%)", color=C_CAR,
+                         secondary_y=False, rangemode="tozero")
+        fig.update_yaxes(title_text="Cobertura por riesgo (%)", color=C_DEP,
+                         secondary_y=True, rangemode="tozero")
         fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=0),
+                          hovermode="x unified", separators=",.",
                           legend=dict(orientation="h", y=-0.2))
         st.plotly_chart(fig, width="stretch")
 
