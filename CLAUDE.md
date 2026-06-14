@@ -181,10 +181,11 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
   final** del tab y se amplía a 8 columnas (Activo·Pasivo·Patrimonio·Cartera
   bruta·Depósitos·Capital social·Excedentes·Base social); se calcula sobre un
   DataFrame `tser` con todas las series. Base social queda en "—" hasta cargar
-  el histórico de asociados. **Nota:** la fila *(corrido)* compara vs. el último
-  cierre de diciembre, así que para Excedentes (flujo) muestra el acumulado YTD
-  parcial (p. ej. -64,7% en abril) — pendiente si se quiere tratar distinto.
-  Tests 27/27.
+  el histórico de asociados. La fila del **año en curso** se etiqueta solo con el
+  año ("2026"); los saldos comparan vs. el último cierre de diciembre (año
+  corrido) y **Excedentes** (flujo) vs. el **mismo mes del año anterior**
+  (interanual, evita el -64,7% engañoso del YTD parcial). Caption explicativo
+  para público general. Tests 27/27.
 
 - **2026-06-14** — **Principales cifras: sección "Cartera, Depósitos y Base
   Social"** (`views/panorama.py`, TAB 1, debajo de Estructura Financiera).

@@ -445,12 +445,23 @@ def render():
         for prev, cur in zip(cierres, cierres[1:]):
             filas[cur[:4]] = {c: _crec(c, prev, cur) for c in COLS}
         if not last.endswith("-12") and base_ytd in tser.index:
-            filas[f"{_etiqueta_periodo(last)} (corrido)"] = {
-                c: _crec(c, base_ytd, last) for c in COLS}
+            # Año en curso (sin cerrar). Los saldos se comparan contra el último
+            # cierre de diciembre (lo corrido del año); los Excedentes —un flujo
+            # que se acumula mes a mes— contra el mismo mes del año anterior.
+            base_12m = f"{int(last[:4]) - 1}-{last[5:]}"
+            filas[last[:4]] = {
+                c: _crec(c, base_12m if c == "Excedentes" else base_ytd, last)
+                for c in COLS}
         if filas:
             st.table(pd.DataFrame(filas).T[COLS])
-            st.caption("La fila *(corrido)* compara el último corte frente al "
-                       "último cierre de diciembre (año corrido).")
+            st.caption(
+                f"Cada porcentaje indica cuánto **creció o se redujo** el rubro en "
+                f"un año: compara el cierre de diciembre con el de diciembre "
+                f"anterior. La fila **{last[:4]}** es el año en curso (aún sin "
+                f"cerrar): los saldos se comparan con el último cierre de diciembre "
+                f"(lo que va **corrido** del año) y los **Excedentes**, por ser un "
+                f"resultado que se acumula mes a mes, con el **mismo mes del año "
+                f"anterior**.")
 
     # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
