@@ -172,6 +172,13 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Formato colombiano en Principales cifras**
+  (`views/panorama.py`, TAB 1). Las métricas de valores y la tabla muestran el
+  símbolo **$**, **punto** para miles y **coma** para decimales (p. ej.
+  `$25.284.110`); los porcentajes usan coma decimal (`67,1%`, `+11,0%`).
+  Helpers locales `_mill`/`_pctv`/`_pct_co` formatean al estilo es-CO. (No se
+  tocó `src/format.py` para no alterar el formateo de las otras páginas.)
+
 - **2026-06-14** — **Gráficas de Principales cifras pasan a mensuales**
   (`views/panorama.py`, TAB 1). La línea de tiempo y ambas gráficas usan ahora
   **todos los meses** del histórico (100 puntos, 2018-01 → 2026-04) en vez de

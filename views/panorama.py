@@ -236,11 +236,17 @@ def render():
         st.subheader("Estructura Financiera")
         st.caption("Cifras Financieras Expresadas en Millones de Pesos Colombianos")
 
-        def _mill(v):  # monto en millones de pesos, con separador de miles
-            return "—" if v is None or v != v else f"{v / 1e6:,.0f}"
+        # Formato colombiano: $ + punto para miles + coma para decimales.
+        def _mill(v):  # monto en millones de pesos
+            if v is None or v != v:
+                return "—"
+            return "$" + f"{v / 1e6:,.0f}".replace(",", ".")
 
         def _pctv(v):  # variación porcentual con signo
-            return "—" if v is None or v != v else f"{v:+.1f}%"
+            return "—" if v is None or v != v else f"{v:+.1f}%".replace(".", ",")
+
+        def _pct_co(v):  # porcentaje sin signo
+            return "—" if v is None or v != v else f"{v:.1f}%".replace(".", ",")
 
         tot_a = f["100000"].sum()
         tot_p = f["200000"].sum()
@@ -249,8 +255,8 @@ def render():
         m[0].metric("Activo", _mill(tot_a))
         m[1].metric("Pasivo", _mill(tot_p))
         m[2].metric("Patrimonio", _mill(tot_pt))
-        m[3].metric("Pasivo / Activo", pct(tot_p / tot_a * 100) if tot_a else "—")
-        m[4].metric("Patrimonio / Activo", pct(tot_pt / tot_a * 100) if tot_a else "—")
+        m[3].metric("Pasivo / Activo", _pct_co(tot_p / tot_a * 100) if tot_a else "—")
+        m[4].metric("Patrimonio / Activo", _pct_co(tot_pt / tot_a * 100) if tot_a else "—")
 
         bal = serie[["100000", "200000", "300000"]].rename(
             columns={"100000": "Activo", "200000": "Pasivo", "300000": "Patrimonio"})
