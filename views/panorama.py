@@ -290,22 +290,25 @@ def render():
             format_func=_mes_corto)
         vis = [p for p in meses if ini <= p <= fin]
 
-        # Eje X en español: categoría = nombre completo del mes (encabezado del
-        # tooltip); el eje muestra SOLO el año (un tick por año, en su primer mes
-        # visible). El orden de la categoría lo fija categoryarray.
+        # Eje X en español: la categoría es el nombre completo del mes (lo que
+        # muestra el encabezado del tooltip). El eje solo rotula AÑOS, dibujados
+        # como anotaciones (no con ticktext, que contaminaría el tooltip en enero).
         x_largo = [_mes_largo(p) for p in vis]
-        tickvals, ticktext, _aniovistos = [], [], set()
+        _aniovistos = set()
+        anota_anios = []
         for p in vis:
             if p[:4] not in _aniovistos:
                 _aniovistos.add(p[:4])
-                tickvals.append(_mes_largo(p))
-                ticktext.append(p[:4])
+                anota_anios.append(dict(x=_mes_largo(p), y=0, xref="x", yref="paper",
+                                        yanchor="top", yshift=-6, showarrow=False,
+                                        text=p[:4], font=dict(size=11, color="#555")))
 
         def _eje_meses(fig):
             fig.update_xaxes(categoryorder="array", categoryarray=x_largo,
-                             tickmode="array", tickvals=tickvals, ticktext=ticktext,
-                             showspikes=True, spikemode="across", spikethickness=1,
-                             spikecolor="#888", spikedash="solid", spikesnap="cursor")
+                             showticklabels=False, showspikes=True, spikemode="across",
+                             spikethickness=1, spikecolor="#888", spikedash="solid",
+                             spikesnap="cursor")
+            fig.update_layout(annotations=anota_anios)
 
         g1, g2 = st.columns(2)
         with g1:
@@ -321,7 +324,7 @@ def render():
             # separators=",." → formato colombiano (coma decimal, punto de miles).
             fig.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
             _eje_meses(fig)
-            fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
+            fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
                               hovermode="x unified", separators=",.",
                               legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig, width="stretch")
@@ -336,7 +339,7 @@ def render():
                            labels={"Mes": "", "VALOR": "% del activo"})
             fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f} %<extra></extra>")
             _eje_meses(fig2)
-            fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
+            fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
                                hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
