@@ -69,6 +69,17 @@ def historico_entidades() -> pd.DataFrame:
     return pd.read_parquet(_ruta("historico_entidades.parquet"))
 
 
+def historico_asociados_disponible() -> bool:
+    """True si existe el histórico de número de asociados (pendiente de cargar).
+    Formato esperado: largo con columnas PERIODO · CODIGO ENTIDAD · ASOCIADOS."""
+    return os.path.exists(_ruta("historico_asociados.parquet"))
+
+
+@st.cache_data
+def historico_asociados() -> pd.DataFrame:
+    return pd.read_parquet(_ruta("historico_asociados.parquet"))
+
+
 @st.cache_data
 def clasificacion_cac() -> pd.DataFrame:
     """Clasificación fija por categoría/subcategoría (período de referencia

@@ -172,6 +172,21 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Principales cifras: sección "Cartera, Depósitos y Base
+  Social"** (`views/panorama.py`, TAB 1, debajo de Estructura Financiera).
+  Cinco métricas en formato colombiano: Cartera bruta (alias `CARTERA_BRUTA`),
+  Depósitos (cuenta `210000`), Capital social (alias `CAPITAL_SOCIAL`),
+  Obligaciones financieras (alias `OBLIGACIONES_FINANCIERAS`, con intereses) y
+  Base social (Nº de asociados, `f["ASOCIADOS"].sum()`). Dos gráficas (estilo
+  Estructura Financiera, eje con años + mes completo en tooltip, $/coma-punto):
+  una con las 3 cifras financieras (Cartera/Depósitos/Capital, mensual) y otra
+  con la base social. **Asociados:** hoy solo hay el dato del corte (un punto,
+  Abril 2026); se añadió el hook `data.historico_asociados_disponible()` /
+  `data.historico_asociados()` (parquet `historico_asociados.parquet` largo
+  PERIODO·CODIGO ENTIDAD·ASOCIADOS) para que, al cargar el histórico, la gráfica
+  se extienda sola. `_eje_meses(fig, periodos)` ahora recibe los períodos (se
+  reutiliza en las 4 gráficas). Nuevo helper `_num` (conteo es-CO). Tests 27/27.
+
 - **2026-06-14** — **Meses en español en las gráficas de Principales cifras**
   (`views/panorama.py`, TAB 1). Plotly de Streamlit no trae el locale es, así que
   las etiquetas se construyen a mano: el eje X usa la categoría = **nombre

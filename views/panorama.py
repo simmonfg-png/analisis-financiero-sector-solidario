@@ -293,22 +293,20 @@ def render():
         # Eje X en español: la categoría es el nombre completo del mes (lo que
         # muestra el encabezado del tooltip). El eje solo rotula AÑOS, dibujados
         # como anotaciones (no con ticktext, que contaminaría el tooltip en enero).
-        x_largo = [_mes_largo(p) for p in vis]
-        _aniovistos = set()
-        anota_anios = []
-        for p in vis:
-            if p[:4] not in _aniovistos:
-                _aniovistos.add(p[:4])
-                anota_anios.append(dict(x=_mes_largo(p), y=0, xref="x", yref="paper",
-                                        yanchor="top", yshift=-6, showarrow=False,
-                                        text=p[:4], font=dict(size=11, color="#555")))
-
-        def _eje_meses(fig):
-            fig.update_xaxes(categoryorder="array", categoryarray=x_largo,
+        def _eje_meses(fig, periodos):
+            xl = [_mes_largo(p) for p in periodos]
+            vistos, anota = set(), []
+            for p in periodos:
+                if p[:4] not in vistos:
+                    vistos.add(p[:4])
+                    anota.append(dict(x=_mes_largo(p), y=0, xref="x", yref="paper",
+                                      yanchor="top", yshift=-6, showarrow=False,
+                                      text=p[:4], font=dict(size=11, color="#555")))
+            fig.update_xaxes(categoryorder="array", categoryarray=xl,
                              showticklabels=False, showspikes=True, spikemode="across",
                              spikethickness=1, spikecolor="#888", spikedash="solid",
                              spikesnap="cursor")
-            fig.update_layout(annotations=anota_anios)
+            fig.update_layout(annotations=anota)
 
         g1, g2 = st.columns(2)
         with g1:
@@ -323,7 +321,7 @@ def render():
             # Tooltip unificado: marcador de color + nombre del rubro + valor del mes.
             # separators=",." → formato colombiano (coma decimal, punto de miles).
             fig.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
-            _eje_meses(fig)
+            _eje_meses(fig, vis)
             fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
                               hovermode="x unified", separators=",.",
                               legend=dict(orientation="h", y=-0.18))
@@ -338,7 +336,7 @@ def render():
                            color_discrete_sequence=[C_PAT, C_DEP],
                            labels={"Mes": "", "VALOR": "% del activo"})
             fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f} %<extra></extra>")
-            _eje_meses(fig2)
+            _eje_meses(fig2, vis)
             fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
                                hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
@@ -364,6 +362,77 @@ def render():
                 r: _pctv(_var(r, base_ytd)) for r in RUBROS}
         if filas:
             st.table(pd.DataFrame(filas).T[RUBROS])
+
+        # ── Cartera, depósitos, capital y base social ───────────────────────────
+        st.divider()
+        st.subheader("Cartera, Depósitos y Base Social")
+        st.caption("Cifras Financieras Expresadas en Millones de Pesos Colombianos")
+
+        def _num(v):  # conteo con separador de miles colombiano (punto)
+            return "—" if v is None or v != v else f"{v:,.0f}".replace(",", ".")
+
+        mc = st.columns(5)
+        mc[0].metric("Cartera bruta", _mill(va("CARTERA_BRUTA")))
+        mc[1].metric("Depósitos", _mill(f["210000"].sum()))
+        mc[2].metric("Capital social", _mill(va("CAPITAL_SOCIAL")))
+        mc[3].metric("Obligaciones financieras", _mill(va("OBLIGACIONES_FINANCIERAS")))
+        mc[4].metric("Base social (asociados)", _num(f["ASOCIADOS"].sum()))
+
+        # Series mensuales: cartera y capital desde las agrupaciones; depósitos
+        # desde la cuenta 210000 del histórico.
+        finser = pd.DataFrame({
+            "Cartera bruta": an.serie_alias(panel, "CARTERA_BRUTA"),
+            "Depósitos": serie["210000"],
+            "Capital social": an.serie_alias(panel, "CAPITAL_SOCIAL"),
+        })
+        FIN = ["Cartera bruta", "Depósitos", "Capital social"]
+
+        h1, h2 = st.columns(2)
+        with h1:
+            st.markdown("**Cifras financieras** (millones COP)")
+            d = (finser.loc[vis, FIN] / 1e6).reset_index()
+            d["Mes"] = d["PERIODO"].map(_mes_largo)
+            largo3 = d.melt(id_vars=["PERIODO", "Mes"], value_vars=FIN,
+                            var_name="Concepto", value_name="VALOR")
+            figf = px.line(largo3, x="Mes", y="VALOR", color="Concepto",
+                           color_discrete_sequence=[C_CAR, C_DEP, C_ACT],
+                           labels={"Mes": "", "VALOR": "Saldo (millones COP)"})
+            figf.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
+            _eje_meses(figf, vis)
+            figf.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
+                               hovermode="x unified", separators=",.",
+                               legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(figf, width="stretch")
+        with h2:
+            st.markdown("**Base social** (número de asociados)")
+            # Por ahora solo se tiene el dato del corte; al cargar el histórico de
+            # asociados (parquet PERIODO·CODIGO ENTIDAD·ASOCIADOS), esta serie se
+            # llenará y la gráfica se extenderá sola.
+            if data.historico_asociados_disponible():
+                ha = data.historico_asociados()
+                if filtrado:
+                    ha = ha[ha["CODIGO ENTIDAD"].isin(f["CODIGO ENTIDAD"])]
+                aso = ha.groupby("PERIODO")["ASOCIADOS"].sum()
+                aso.index = aso.index.astype(str)
+                aso = aso[aso.index <= corte].sort_index()
+            else:
+                aso = pd.Series({corte: float(f["ASOCIADOS"].sum())})
+            da = aso.reset_index()
+            da.columns = ["PERIODO", "Asociados"]
+            da["Mes"] = da["PERIODO"].map(_mes_largo)
+            figa = px.line(da, x="Mes", y="Asociados", markers=True,
+                           color_discrete_sequence=[C_PAT],
+                           labels={"Mes": "", "Asociados": ""})
+            figa.update_traces(hovertemplate="Asociados: %{y:,.0f}<extra></extra>")
+            _eje_meses(figa, list(da["PERIODO"]))
+            figa.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=28),
+                               hovermode="x unified", separators=",.",
+                               legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(figa, width="stretch")
+            if len(da) <= 1:
+                st.caption(f"Por ahora solo está disponible el dato del corte "
+                           f"(**{_mes_largo(corte)}**). El histórico de asociados "
+                           "se añadirá cuando se cargue.")
 
     # ── TAB 2 · Sector ──────────────────────────────────────────────────────────
     with tabs[1]:
