@@ -172,6 +172,15 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Mapa de calor en la tabla de crecimiento histórico**
+  (`views/panorama.py`, TAB 1). La tabla pasa a `st.table` con un `Styler`: cada
+  celda lleva un degradado (rojo = caída, verde = crecimiento) calculado a mano
+  en CSS (`Styler.map`, sin matplotlib). Escala global centrada en 0 con
+  corrección gamma 0.6 para que el outlier (-48% excedentes 2020) no deje sin
+  color los crecimientos típicos de ~10%. `_crec` ahora devuelve el número y el
+  formato es-CO se aplica en `Styler.format`; celdas sin dato (Base social) sin
+  color. Verificado por DOM (colores correctos por celda). Tests 27/27.
+
 - **2026-06-14** — **Actividad Financiera: título, 2ª línea de tiempo y tabla
   ampliada** (`views/panorama.py`, TAB 1). La sección "Cartera, Depósitos y Base
   Social" se renombra **"Actividad Financiera"**. Sus dos gráficas (Cifras

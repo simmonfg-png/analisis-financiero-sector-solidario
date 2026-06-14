@@ -438,8 +438,8 @@ def render():
         def _crec(col, prev, cur):
             a, b = tser.at[prev, col], tser.at[cur, col]
             if pd.isna(a) or pd.isna(b) or a == 0:
-                return "—"
-            return _pctv((b / a - 1) * 100)
+                return float("nan")
+            return (b / a - 1) * 100
 
         filas = {}
         for prev, cur in zip(cierres, cierres[1:]):
@@ -453,7 +453,31 @@ def render():
                 c: _crec(c, base_12m if c == "Excedentes" else base_ytd, last)
                 for c in COLS}
         if filas:
-            st.table(pd.DataFrame(filas).T[COLS])
+            num = pd.DataFrame(filas).T[COLS].astype(float)
+
+            # Mapa de calor: degradado por celda centrado en 0 (rojo = caída,
+            # verde = crecimiento; intensidad según la magnitud). Escala global.
+            _mx = num.abs().max().max()      # máximo en valor absoluto (ignora NaN)
+            escala = float(_mx) if pd.notna(_mx) and _mx else 1.0
+
+            def _color(v):
+                if pd.isna(v) or escala == 0:
+                    return ""
+                t = max(-1.0, min(1.0, v / escala))
+                # gamma<1 realza las magnitudes pequeñas (si no, el outlier
+                # deja casi sin color a los crecimientos típicos de ~10%).
+                t = abs(t) ** 0.6 * (1 if t >= 0 else -1)
+                if t >= 0:  # blanco → verde
+                    r, g, b = int(255 - t * 179), int(255 - t * 80), int(255 - t * 175)
+                else:       # blanco → rojo
+                    s = -t
+                    r, g, b = int(255 - s * 26), int(255 - s * 198), int(255 - s * 202)
+                return f"background-color: rgb({r},{g},{b})"
+
+            sty = (num.style
+                   .map(_color)
+                   .format(lambda v: _pctv(v) if pd.notna(v) else "—"))
+            st.table(sty)
             st.caption(
                 f"Cada porcentaje indica cuánto **creció o se redujo** el rubro en "
                 f"un año: compara el cierre de diciembre con el de diciembre "
