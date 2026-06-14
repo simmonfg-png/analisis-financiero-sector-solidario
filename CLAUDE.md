@@ -172,6 +172,20 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Cartera: sección "Calidad de Cartera"** (`views/panorama.py`,
+  TAB 4). Reemplaza el trío de métricas de riesgo. Fila 1 (indicadores): Calidad
+  por riesgo (`CARTERA_EN_RIESGO/CARTERA_BRUTA` = 8,5%), Calidad con castigos
+  (`(riesgo+CASTIGOS)/(bruta+CASTIGOS)` = 13,1%) y Cobertura cartera en riesgo
+  (`PROVISIONES_TOTAL/CARTERA_EN_RIESGO` = 90,3%). Fila 2 (millones COP): Cartera
+  en riesgo ($1.729.053 M) y Provisiones totales ($1.561.615 M). Se quitó también
+  la fila "Cartera bruta total" de la tabla de modalidades (ya está en la cifra
+  destacada). **Pendiente de datos:** los indicadores de *altura de mora*
+  (Indicador por Altura de Mora, Cobertura Cartera en Mora, $ Cartera en Mora) no
+  son calculables con el balance a 6 dígitos —requieren el detalle de cartera por
+  días de vencimiento (`raw_cartera`), no integrado (decisión 2026-06-10). El
+  usuario buscará ese reporte para subirlo; cuando llegue se completan las filas
+  (1→5 métricas, 2→3). Tests 27/27. Verificado por DOM.
+
 - **2026-06-14** — **Pestaña "Cartera" rediseñada** (`views/panorama.py`, TAB 4).
   Título **"Cartera de Crédito"** + aclaración "Cifras Financieras Expresadas en
   Millones de Pesos Colombianos". Encabezado: **Cartera Bruta** centrada, grande

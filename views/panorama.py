@@ -692,19 +692,33 @@ def render():
                 "Valor (millones COP)": tdf["Valor"].map(_mill).values,
             }, index=tdf["Modalidad"].values)
             tabla.index.name = "Modalidad"
-            tabla.loc["Cartera bruta total"] = [_mill(cb)]
             st.table(tabla)
 
-        # Riesgo de la cartera (contexto para las gráficas siguientes).
+        # ── Calidad de Cartera ─────────────────────────────────────────────────
+        st.divider()
+        st.subheader("Calidad de Cartera")
+
         ri = va("CARTERA_EN_RIESGO")
         pr = va("PROVISIONES_TOTAL")
-        k = st.columns(3)
-        k[0].metric("Cartera en riesgo (B-E)", _mill(ri),
-                    help="Capital + intereses en categorías B a E")
-        k[1].metric("Calidad por riesgo", pct(ri / cb * 100 if cb else float("nan")),
-                    help="Cartera en riesgo / cartera bruta")
-        k[2].metric("Cobertura por riesgo", pct(pr / ri * 100 if ri else float("nan")),
+        cast = va("CASTIGOS")
+        cal_riesgo = ri / cb * 100 if cb else float("nan")
+        cal_castigos = (ri + cast) / (cb + cast) * 100 if (cb + cast) else float("nan")
+        cob_riesgo = pr / ri * 100 if ri else float("nan")
+        # Indicadores de "altura de mora" pendientes: requieren el detalle de
+        # cartera por días de vencimiento (raw_cartera), aún no integrado.
+        q = st.columns(3)
+        q[0].metric("Calidad por riesgo", pct(cal_riesgo),
+                    help="Cartera en riesgo (categorías B-E) / cartera bruta")
+        q[1].metric("Calidad con castigos", pct(cal_castigos),
+                    help="(Cartera en riesgo + castigos) / (cartera bruta + castigos)")
+        q[2].metric("Cobertura cartera en riesgo", pct(cob_riesgo),
                     help="Provisiones totales / cartera en riesgo")
+
+        v = st.columns(3)
+        v[0].metric("Cartera en riesgo ($)", _mill(ri),
+                    help="Capital + intereses en categorías B a E")
+        v[1].metric("Provisiones totales ($)", _mill(pr),
+                    help="Provisiones individuales + generales")
 
         st.subheader("Calidad y cobertura en el tiempo")
         calidad = an.ratio_alias(panel, "CARTERA_EN_RIESGO", "CARTERA_BRUTA")
