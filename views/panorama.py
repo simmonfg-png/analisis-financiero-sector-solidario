@@ -655,35 +655,70 @@ def render():
 
     # ── TAB 4 · Cartera ─────────────────────────────────────────────────────────
     with tabs[3]:
+        st.subheader("Cartera de Crédito")
+        st.caption("Cifras Financieras Expresadas en Millones de Pesos Colombianos")
+
+        # Formato colombiano: $ + punto para miles, sobre la cifra en millones.
+        def _mill(v):
+            if v is None or v != v:
+                return "—"
+            return "$" + f"{v / 1e6:,.0f}".replace(",", ".")
+
+        # Cartera bruta total: centrada, grande y en negrita.
         cb = va("CARTERA_BRUTA")
+        st.markdown(
+            f"<div style='text-align:center;margin:0.4rem 0 1.2rem'>"
+            f"<div style='font-size:1rem;color:#666;letter-spacing:.02em'>Cartera Bruta</div>"
+            f"<div style='font-size:2.9rem;font-weight:800;color:{C_CAR};line-height:1.1'>"
+            f"{_mill(cb)}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+        # Peso de cada modalidad sobre el total: torta + tabla en millones COP.
+        datos = [{"Modalidad": etq, "Valor": va(a)} for a, etq in MODALIDADES]
+        datos = [d for d in datos if d["Valor"] and d["Valor"] > 0]
+        g1, g2 = st.columns([1, 1])
+        with g1:
+            fig = px.pie(datos, names="Modalidad", values="Valor", hole=0.45,
+                         color_discrete_sequence=PALETA)
+            fig.update_traces(textposition="inside", textinfo="percent",
+                              hovertemplate="%{label}: %{percent}<extra></extra>")
+            fig.update_layout(height=360, margin=dict(t=10, b=0), legend_font_size=11,
+                              separators=",.")
+            st.plotly_chart(fig, width="stretch")
+        with g2:
+            tdf = pd.DataFrame(datos).sort_values("Valor", ascending=False)
+            tabla = pd.DataFrame({
+                "Valor (millones COP)": tdf["Valor"].map(_mill).values,
+            }, index=tdf["Modalidad"].values)
+            tabla.index.name = "Modalidad"
+            tabla.loc["Cartera bruta total"] = [_mill(cb)]
+            st.table(tabla)
+
+        # Riesgo de la cartera (contexto para las gráficas siguientes).
         ri = va("CARTERA_EN_RIESGO")
         pr = va("PROVISIONES_TOTAL")
-        k = st.columns(4)
-        _hero(k[0], "Cartera bruta", pesos(cb), C_CAR)
-        k[1].metric("Cartera en riesgo (B-E)", pesos(ri),
+        k = st.columns(3)
+        k[0].metric("Cartera en riesgo (B-E)", _mill(ri),
                     help="Capital + intereses en categorías B a E")
-        k[2].metric("Calidad por riesgo", pct(ri / cb * 100 if cb else float("nan")),
+        k[1].metric("Calidad por riesgo", pct(ri / cb * 100 if cb else float("nan")),
                     help="Cartera en riesgo / cartera bruta")
-        k[3].metric("Cobertura por riesgo", pct(pr / ri * 100 if ri else float("nan")),
+        k[2].metric("Cobertura por riesgo", pct(pr / ri * 100 if ri else float("nan")),
                     help="Provisiones totales / cartera en riesgo")
 
-        c1, c2 = st.columns(2)
-        with c1:
-            _torta_alias(panel, corte, MODALIDADES, "Composición por modalidad")
-        with c2:
-            st.subheader("Calidad y cobertura en el tiempo")
-            calidad = an.ratio_alias(panel, "CARTERA_EN_RIESGO", "CARTERA_BRUTA")
-            cobertura = an.ratio_alias(panel, "PROVISIONES_TOTAL", "CARTERA_EN_RIESGO")
-            comp = calidad.to_frame("Calidad por riesgo")
-            comp["Cobertura por riesgo"] = cobertura
-            largo = comp.reset_index().melt(id_vars="PERIODO", var_name="Indicador",
-                                            value_name="pct")
-            fig = px.line(largo, x="PERIODO", y="pct", color="Indicador",
-                          color_discrete_sequence=[C_CAR, C_DEP],
-                          labels={"PERIODO": "", "pct": "%"})
-            fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=0),
-                              legend=dict(orientation="h", y=-0.2))
-            st.plotly_chart(fig, width="stretch")
+        st.subheader("Calidad y cobertura en el tiempo")
+        calidad = an.ratio_alias(panel, "CARTERA_EN_RIESGO", "CARTERA_BRUTA")
+        cobertura = an.ratio_alias(panel, "PROVISIONES_TOTAL", "CARTERA_EN_RIESGO")
+        comp = calidad.to_frame("Calidad por riesgo")
+        comp["Cobertura por riesgo"] = cobertura
+        largo = comp.reset_index().melt(id_vars="PERIODO", var_name="Indicador",
+                                        value_name="pct")
+        fig = px.line(largo, x="PERIODO", y="pct", color="Indicador",
+                      color_discrete_sequence=[C_CAR, C_DEP],
+                      labels={"PERIODO": "", "pct": "%"})
+        fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=0),
+                          legend=dict(orientation="h", y=-0.2))
+        st.plotly_chart(fig, width="stretch")
 
         _area_modalidades(panel, MODALIDADES, "Evolución de la cartera por modalidad")
 

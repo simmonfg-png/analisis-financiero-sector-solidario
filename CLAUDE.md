@@ -172,6 +172,21 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Pestaña "Cartera" rediseñada** (`views/panorama.py`, TAB 4).
+  Título **"Cartera de Crédito"** + aclaración "Cifras Financieras Expresadas en
+  Millones de Pesos Colombianos". Encabezado: **Cartera Bruta** centrada, grande
+  y en negrita (HTML, ~46px, color `C_CAR`). Debajo, en dos columnas: **dona**
+  con el peso % de cada modalidad sobre el total + **tabla** (`st.table`,
+  índice=Modalidad) con el valor de cada modalidad en millones de pesos
+  (formato colombiano `$` + punto de miles, helper local `_mill`), ordenada
+  desc. con fila de total; el % vive solo en la dona. Las 7 modalidades salen de
+  `MODALIDADES` (Consumo caja/libranza, Comercial, Productivo, Vivienda,
+  Microcrédito, Empleados; "Cartera Bruta Empleados" la reportan 20 CAC,
+  Crediservir ≈47%). Se conservan abajo las métricas de riesgo, la gráfica de
+  calidad/cobertura y la evolución por modalidad. **Nota:** `Styler.hide(axis=
+  "index")` no surte efecto vía `st.table`, por eso la modalidad va como índice.
+  Tests 27/27. Verificado por DOM.
+
 - **2026-06-14** — **Mapa de calor en la tabla de crecimiento histórico**
   (`views/panorama.py`, TAB 1). La tabla pasa a `st.table` con un `Styler`: cada
   celda lleva un degradado (rojo = caída, verde = crecimiento) calculado a mano
