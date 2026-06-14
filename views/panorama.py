@@ -282,11 +282,12 @@ def render():
                           color_discrete_sequence=SEQ,
                           labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
             # Tooltip unificado: marcador de color + nombre del rubro + valor del mes.
-            fig.update_traces(hovertemplate="%{fullData.name}: %{y:,.0f}<extra></extra>")
+            # separators=",." → formato colombiano (coma decimal, punto de miles).
+            fig.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
             fig.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
                              spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
-                              hovermode="x unified",
+                              hovermode="x unified", separators=",.",
                               legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig, width="stretch")
         with g2:
@@ -301,7 +302,7 @@ def render():
             fig2.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
                               spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
-                               hovermode="x unified",
+                               hovermode="x unified", separators=",.",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
 
