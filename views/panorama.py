@@ -344,26 +344,13 @@ def render():
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
 
-        # ── Variaciones (tabla resumen) ─────────────────────────────────────────
-        st.markdown("**Variaciones**")
         last = bal.index[-1]
-        anio = int(last[:4])
-        base_12m = f"{anio - 1}-{last[5:]}"      # mismo mes del año anterior
-        base_ytd = f"{anio - 1}-12"              # último cierre anual
+        base_ytd = f"{int(last[:4]) - 1}-12"     # último cierre anual
 
         def _var(col, base):
             if base in bal.index and bal.at[base, col]:
                 return (bal.at[last, col] / bal.at[base, col] - 1) * 100
             return float("nan")
-
-        resumen = pd.DataFrame({
-            "Saldo (millones)": {r: _mill(bal.at[last, r]) for r in RUBROS},
-            "Var. anual (12 m)": {r: _pctv(_var(r, base_12m)) for r in RUBROS},
-            "Año corrido (vs. último cierre)": {r: _pctv(_var(r, base_ytd)) for r in RUBROS},
-        })
-        st.table(resumen)
-        st.caption(f"Variación anual: corte **{last}** frente a **{base_12m}** · "
-                   f"Año corrido: frente al último cierre anual **{base_ytd}**.")
 
         # ── Crecimiento anual histórico por rubro ───────────────────────────────
         st.markdown("**Crecimiento anual histórico** (% de variación entre cierres de diciembre)")
