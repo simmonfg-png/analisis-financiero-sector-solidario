@@ -172,6 +172,11 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Gráficas de Principales cifras pasan a mensuales**
+  (`views/panorama.py`, TAB 1). La línea de tiempo y ambas gráficas usan ahora
+  **todos los meses** del histórico (100 puntos, 2018-01 → 2026-04) en vez de
+  solo fin de trimestre. Título "Evolución trimestral" → "Evolución mensual".
+
 - **2026-06-14** — **Se revierte la proyección Holt-Winters** (decisión del
   usuario: "quitemos el tema de la proyección"). Se eliminan la casilla y las
   trazas de proyección/banda en `views/panorama.py`, las funciones

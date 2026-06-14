@@ -261,14 +261,14 @@ def render():
         SEQ = [C_ACT, C_PAT, C_DEP]
 
         # ── Línea de tiempo compartida + dos gráficas lado a lado ───────────────
-        trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
-        ini, fin = st.select_slider("Línea de tiempo", options=trims,
-                                    value=(trims[0], trims[-1]))
-        vis = [p for p in trims if ini <= p <= fin]
+        meses = list(bal.index)  # todos los meses del histórico
+        ini, fin = st.select_slider("Línea de tiempo", options=meses,
+                                    value=(meses[0], meses[-1]))
+        vis = [p for p in meses if ini <= p <= fin]
 
         g1, g2 = st.columns(2)
         with g1:
-            st.markdown("**Evolución trimestral** (millones COP)")
+            st.markdown("**Evolución mensual** (millones COP)")
             trim = (bal.loc[vis, RUBROS] / 1e6).reset_index()
             largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
                               var_name="Rubro", value_name="VALOR")
