@@ -172,6 +172,17 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
 
+- **2026-06-14** — **Principales cifras: ratios + 2ª gráfica + línea de tiempo**
+  (`views/panorama.py`, TAB 1). Se añaden dos métricas más (fila de 5):
+  **Pasivo/Activo** y **Patrimonio/Activo** en % con un decimal (vía `pct`).
+  Nueva gráfica **"Estructura relativa"** (evolución de esos dos ratios, % del
+  activo) **al lado** de "Evolución trimestral" (`st.columns(2)`). Ambas
+  responden a una **línea de tiempo compartida** (`st.select_slider` con rango
+  de períodos trimestrales). La de "Evolución trimestral" deja de usar la
+  línea-guía/`x unified`: vuelve a **hover normal** (`hovermode="closest"`),
+  mostrando el valor del punto señalado. Verificado en navegador (5 métricas,
+  slider y ambas trazas correctas).
+
 - **2026-06-14** — **Principales cifras rediseñada** (`views/panorama.py`, TAB 1).
   Título de la sección → **"Estructura Financiera"** con subheader *"Cifras
   Financieras Expresadas en Millones de Pesos Colombianos"*. Las tres métricas

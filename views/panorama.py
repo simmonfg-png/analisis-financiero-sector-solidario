@@ -242,34 +242,58 @@ def render():
         def _pctv(v):  # variación porcentual con signo
             return "—" if v is None or v != v else f"{v:+.1f}%"
 
-        m = st.columns(3)
-        m[0].metric("Activo", _mill(f["100000"].sum()))
-        m[1].metric("Pasivo", _mill(f["200000"].sum()))
-        m[2].metric("Patrimonio", _mill(f["300000"].sum()))
+        tot_a = f["100000"].sum()
+        tot_p = f["200000"].sum()
+        tot_pt = f["300000"].sum()
+        m = st.columns(5)
+        m[0].metric("Activo", _mill(tot_a))
+        m[1].metric("Pasivo", _mill(tot_p))
+        m[2].metric("Patrimonio", _mill(tot_pt))
+        m[3].metric("Pasivo / Activo", pct(tot_p / tot_a * 100) if tot_a else "—")
+        m[4].metric("Patrimonio / Activo", pct(tot_pt / tot_a * 100) if tot_a else "—")
 
         bal = serie[["100000", "200000", "300000"]].rename(
             columns={"100000": "Activo", "200000": "Pasivo", "300000": "Patrimonio"})
+        bal["Pasivo/Activo"] = (bal["Pasivo"] / bal["Activo"] * 100).where(bal["Activo"] != 0)
+        bal["Patrimonio/Activo"] = (bal["Patrimonio"] / bal["Activo"] * 100).where(bal["Activo"] != 0)
         RUBROS = ["Activo", "Pasivo", "Patrimonio"]
+        RATIOS = ["Pasivo/Activo", "Patrimonio/Activo"]
         SEQ = [C_ACT, C_PAT, C_DEP]
 
-        # ── Evolución trimestral (línea sin marcadores + línea-guía al señalar) ──
-        st.markdown("**Evolución trimestral** (millones COP)")
+        # ── Línea de tiempo compartida + dos gráficas lado a lado ───────────────
         trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
-        trim = (bal.loc[trims] / 1e6).reset_index()
-        largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
-                          var_name="Rubro", value_name="VALOR")
-        fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
-                      color_discrete_sequence=SEQ,
-                      labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
-        fig.update_traces(hovertemplate="%{y:,.0f}<extra></extra>")
-        # Línea-guía vertical punteada que cruza la gráfica y muestra los tres
-        # valores (Activo/Pasivo/Patrimonio) en el punto señalado.
-        fig.update_xaxes(showspikes=True, spikemode="across", spikedash="dot",
-                         spikecolor="#888", spikethickness=1, spikesnap="cursor")
-        fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
-                          hovermode="x unified",
-                          legend=dict(orientation="h", y=-0.18))
-        st.plotly_chart(fig, width="stretch")
+        ini, fin = st.select_slider("Línea de tiempo", options=trims,
+                                    value=(trims[0], trims[-1]))
+        vis = [p for p in trims if ini <= p <= fin]
+
+        g1, g2 = st.columns(2)
+        with g1:
+            st.markdown("**Evolución trimestral** (millones COP)")
+            trim = (bal.loc[vis, RUBROS] / 1e6).reset_index()
+            largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
+                              var_name="Rubro", value_name="VALOR")
+            fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
+                          color_discrete_sequence=SEQ,
+                          labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
+            # Gráfica normal: al señalar un punto se muestra el valor de ese mes.
+            fig.update_traces(hovertemplate="%{fullData.name}: %{y:,.0f}<extra></extra>")
+            fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
+                              hovermode="closest",
+                              legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(fig, width="stretch")
+        with g2:
+            st.markdown("**Estructura relativa** (% del activo)")
+            rel = bal.loc[vis, RATIOS].reset_index()
+            largo2 = rel.melt(id_vars="PERIODO", value_vars=RATIOS,
+                              var_name="Indicador", value_name="VALOR")
+            fig2 = px.line(largo2, x="PERIODO", y="VALOR", color="Indicador",
+                           color_discrete_sequence=[C_PAT, C_DEP],
+                           labels={"PERIODO": "", "VALOR": "% del activo"})
+            fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f}%<extra></extra>")
+            fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
+                               hovermode="closest",
+                               legend=dict(orientation="h", y=-0.18))
+            st.plotly_chart(fig2, width="stretch")
 
         # ── Variaciones (tabla resumen) ─────────────────────────────────────────
         st.markdown("**Variaciones**")
