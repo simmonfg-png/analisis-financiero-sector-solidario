@@ -98,6 +98,25 @@ def _mes_corto(periodo):
     return f"{_MES_CORTO[int(periodo[5:])]} {periodo[:4]}"
 
 
+def _eje_meses(fig, periodos):
+    """Eje X en español: la categoría es el nombre completo del mes (lo que
+    muestra el encabezado del tooltip). El eje solo rotula AÑOS, dibujados como
+    anotaciones (no con ticktext, que contaminaría el tooltip en enero)."""
+    xl = [_mes_largo(p) for p in periodos]
+    vistos, anota = set(), []
+    for p in periodos:
+        if p[:4] not in vistos:
+            vistos.add(p[:4])
+            anota.append(dict(x=_mes_largo(p), y=0, xref="x", yref="paper",
+                              yanchor="top", yshift=-6, showarrow=False,
+                              text=p[:4], font=dict(size=11, color="#555")))
+    fig.update_xaxes(categoryorder="array", categoryarray=xl,
+                     showticklabels=False, showspikes=True, spikemode="across",
+                     spikethickness=1, spikecolor="#888", spikedash="solid",
+                     spikesnap="cursor")
+    fig.update_layout(annotations=anota)
+
+
 def _etiqueta_periodo(periodo):
     """'2024-12' → '2024'; cortes intermedios → '2026·mar' (para el eje de barras)."""
     anio, mes = periodo.split("-")
@@ -290,23 +309,6 @@ def render():
             format_func=_mes_corto)
         vis = [p for p in meses if ini <= p <= fin]
 
-        # Eje X en español: la categoría es el nombre completo del mes (lo que
-        # muestra el encabezado del tooltip). El eje solo rotula AÑOS, dibujados
-        # como anotaciones (no con ticktext, que contaminaría el tooltip en enero).
-        def _eje_meses(fig, periodos):
-            xl = [_mes_largo(p) for p in periodos]
-            vistos, anota = set(), []
-            for p in periodos:
-                if p[:4] not in vistos:
-                    vistos.add(p[:4])
-                    anota.append(dict(x=_mes_largo(p), y=0, xref="x", yref="paper",
-                                      yanchor="top", yshift=-6, showarrow=False,
-                                      text=p[:4], font=dict(size=11, color="#555")))
-            fig.update_xaxes(categoryorder="array", categoryarray=xl,
-                             showticklabels=False, showspikes=True, spikemode="across",
-                             spikethickness=1, spikecolor="#888", spikedash="solid",
-                             spikesnap="cursor")
-            fig.update_layout(annotations=anota)
 
         g1, g2 = st.columns(2)
         with g1:
@@ -734,18 +736,22 @@ def render():
         # Doble eje: calidad (~8%) a la izquierda, cobertura (~90%) a la derecha,
         # para que ambas series sean legibles pese a su escala distinta.
         per = list(calidad.index)
+        xm = [_mes_largo(p) for p in per]  # eje en español (Enero 2020, …)
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.add_trace(go.Scatter(x=per, y=calidad.values, name="Calidad por riesgo",
-                                 mode="lines", line=dict(color=C_CAR, width=2)),
+        fig.add_trace(go.Scatter(x=xm, y=calidad.values, name="Calidad",
+                                 mode="lines", line=dict(color=C_CAR, width=2),
+                                 hovertemplate="%{fullData.name}: %{y:.2f} %<extra></extra>"),
                       secondary_y=False)
-        fig.add_trace(go.Scatter(x=per, y=cobertura.values, name="Cobertura por riesgo",
-                                 mode="lines", line=dict(color=C_DEP, width=2)),
+        fig.add_trace(go.Scatter(x=xm, y=cobertura.values, name="Cobertura",
+                                 mode="lines", line=dict(color=C_DEP, width=2),
+                                 hovertemplate="%{fullData.name}: %{y:.2f} %<extra></extra>"),
                       secondary_y=True)
         fig.update_yaxes(title_text="Calidad por riesgo (%)", color=C_CAR,
                          secondary_y=False, rangemode="tozero")
         fig.update_yaxes(title_text="Cobertura por riesgo (%)", color=C_DEP,
                          secondary_y=True, rangemode="tozero")
-        fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=0),
+        _eje_meses(fig, per)
+        fig.update_layout(height=330, margin=dict(l=0, r=0, t=10, b=28),
                           hovermode="x unified", separators=",.",
                           legend=dict(orientation="h", y=-0.2))
         st.plotly_chart(fig, width="stretch")
