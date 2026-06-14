@@ -19,7 +19,7 @@ del **sector solidario colombiano**, a partir de los reportes oficiales de la
 
 ## 2. Stack y entorno
 
-- Python 3.12 · Streamlit 1.57.0 · pandas 3.0.3 · plotly 6.7.0 · openpyxl 3.1.5 · pyarrow 24.0.0 · statsmodels 0.14.6 (proyección Holt-Winters) · pytest.
+- Python 3.12 · Streamlit 1.57.0 · pandas 3.0.3 · plotly 6.7.0 · openpyxl 3.1.5 · pyarrow 24.0.0 · pytest.
 - SO de trabajo: **Windows** (PowerShell). Ruta local del proyecto:
   `C:\Users\SIMON\Desktop\PROYECTOS\ANALISIS FINANCIERO SECTOR SOLIDARIO`.
 - Arrancar la app: `streamlit run app.py` (abre en http://localhost:8501).
@@ -171,6 +171,18 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 ## 10. Bitácora de cambios
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
+
+- **2026-06-14** — **Se revierte la proyección Holt-Winters** (decisión del
+  usuario: "quitemos el tema de la proyección"). Se eliminan la casilla y las
+  trazas de proyección/banda en `views/panorama.py`, las funciones
+  `analytics.trimestres_hasta` y `analytics.proyectar_ets`, el wrapper
+  `data.proyeccion_balance`, los tests asociados y la dependencia `statsmodels`.
+  La línea de tiempo vuelve a cubrir solo los trimestres reales. **Fix del
+  tooltip:** el `hovertemplate` pasa a `"%{fullData.name}: %{y…}<extra></extra>"`
+  en ambas gráficas; antes (sin el nombre) Plotly suprimía la fila de la
+  mini-leyenda interna del tooltip unificado y con ella **el marcador de color y
+  el nombre** del rubro. Verificado por hover real: el tooltip muestra el círculo
+  de color (naranja/morado/verde) y "Activo/Pasivo/Patrimonio: valor". Tests 27/27.
 
 - **2026-06-14** — **Proyección Holt-Winters a dic-2027** en Principales cifras
   (`views/panorama.py`, TAB 1). Casilla "Proyectar a dic-2027" (default ON) que

@@ -85,21 +85,6 @@ def historico_panel() -> pd.DataFrame:
     return an.panel_mensual(historico())
 
 
-@st.cache_data(show_spinner="Ajustando proyección…")
-def proyeccion_balance(trim: pd.DataFrame, futuros: tuple[str, ...],
-                       nivel: float = 0.8) -> dict[str, pd.DataFrame]:
-    """Proyección Holt-Winters por rubro (cacheada por la serie trimestral y el
-    horizonte). `trim` es el DataFrame de saldos trimestrales (PERIODO×rubro);
-    devuelve {rubro: DataFrame media/inf/sup} solo para los rubros proyectables."""
-    from src import analytics as an
-    out = {}
-    for col in trim.columns:
-        proy = an.proyectar_ets(trim[col], list(futuros), nivel=nivel)
-        if proy is not None:
-            out[col] = proy
-    return out
-
-
 @st.cache_data
 def riesgo_cartera() -> pd.DataFrame:
     _asegurar_datos()

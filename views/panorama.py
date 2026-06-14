@@ -262,68 +262,21 @@ def render():
 
         # ── Línea de tiempo compartida + dos gráficas lado a lado ───────────────
         trims = [p for p in bal.index if p[-2:] in ("03", "06", "09", "12")]
-        last = trims[-1]
-        COLOR_RUBRO = dict(zip(RUBROS, SEQ))
-
-        cc = st.columns([1, 2])
-        proyectar = cc[0].checkbox("Proyectar a dic-2027", value=True,
-                                   help="Suavizado exponencial Holt-Winters con "
-                                        "banda de predicción al 80%. Es una "
-                                        "estimación del modelo, no un dato oficial.")
-        # Proyección Holt-Winters por rubro (cacheada; no depende del slider).
-        fut_all = an.trimestres_hasta(last, "2027-12") if proyectar else []
-        proj = (data.proyeccion_balance(bal.loc[trims, RUBROS], tuple(fut_all), 0.8)
-                if fut_all else {})
-        opciones = trims + (fut_all if proj else [])
-        ini, fin = st.select_slider("Línea de tiempo", options=opciones,
-                                    value=(trims[0], opciones[-1]))
-        vis = [p for p in opciones if ini <= p <= fin]
-        vis_act = [p for p in vis if p in set(trims)]
-        vis_fut = [p for p in vis if p in set(fut_all)]
-
-        def _rgba(hexcol, a):
-            h = hexcol.lstrip("#")
-            return f"rgba({int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)},{a})"
-
-        def _add_proy(fig, etq, color, serie_proy, div, htmpl, banda=True):
-            """Añade a `fig` la línea punteada de proyección (y su banda) de un
-            rubro, anclada al último dato real para que sea continua."""
-            d = serie_proy.loc[[p for p in vis_fut if p in serie_proy.index]]
-            if d.empty:
-                return
-            fut = list(d.index)
-            anc_x = [last] if last in vis_act else []
-            anc_y = [bal.at[last, etq] / div] if anc_x else []
-            if banda and {"inf", "sup"}.issubset(d.columns):
-                bx = anc_x + fut
-                inf = anc_y + list(d["inf"] / div)
-                sup = anc_y + list(d["sup"] / div)
-                fig.add_trace(go.Scatter(x=bx, y=inf, mode="lines", line=dict(width=0),
-                                         showlegend=False, hoverinfo="skip"))
-                fig.add_trace(go.Scatter(x=bx, y=sup, mode="lines", line=dict(width=0),
-                                         fill="tonexty", fillcolor=_rgba(color, 0.12),
-                                         showlegend=False, hoverinfo="skip"))
-            fig.add_trace(go.Scatter(
-                x=anc_x + fut, y=anc_y + list(d["media"] / div), mode="lines",
-                line=dict(color=color, dash="dot"), name=f"{etq} (proy.)",
-                showlegend=False, hovertemplate=htmpl))
+        ini, fin = st.select_slider("Línea de tiempo", options=trims,
+                                    value=(trims[0], trims[-1]))
+        vis = [p for p in trims if ini <= p <= fin]
 
         g1, g2 = st.columns(2)
         with g1:
             st.markdown("**Evolución trimestral** (millones COP)")
-            trim = (bal.loc[vis_act, RUBROS] / 1e6).reset_index()
+            trim = (bal.loc[vis, RUBROS] / 1e6).reset_index()
             largo = trim.melt(id_vars="PERIODO", value_vars=RUBROS,
                               var_name="Rubro", value_name="VALOR")
             fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
                           color_discrete_sequence=SEQ,
                           labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
-            # Al señalar: línea-guía vertical + un círculo por serie y un tooltip
-            # con la fecha y el valor de cada rubro (hovermode x unified + spikes).
-            fig.update_traces(hovertemplate="%{y:,.0f}<extra></extra>")
-            for etq in RUBROS:
-                if etq in proj:
-                    _add_proy(fig, etq, COLOR_RUBRO[etq], proj[etq], 1e6,
-                              "%{y:,.0f}<extra></extra>")
+            # Tooltip unificado: marcador de color + nombre del rubro + valor del mes.
+            fig.update_traces(hovertemplate="%{fullData.name}: %{y:,.0f}<extra></extra>")
             fig.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
                              spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
@@ -332,36 +285,19 @@ def render():
             st.plotly_chart(fig, width="stretch")
         with g2:
             st.markdown("**Estructura relativa** (% del activo)")
-            rel = bal.loc[vis_act, RATIOS].reset_index()
+            rel = bal.loc[vis, RATIOS].reset_index()
             largo2 = rel.melt(id_vars="PERIODO", value_vars=RATIOS,
                               var_name="Indicador", value_name="VALOR")
             fig2 = px.line(largo2, x="PERIODO", y="VALOR", color="Indicador",
                            color_discrete_sequence=[C_PAT, C_DEP],
                            labels={"PERIODO": "", "VALOR": "% del activo"})
-            fig2.update_traces(hovertemplate="%{y:.1f} %<extra></extra>")
-            # Proyección de los ratios derivada de las medias proyectadas de los
-            # rubros (sin banda: el ratio no hereda un intervalo de predicción limpio).
-            if {"Activo", "Pasivo", "Patrimonio"}.issubset(proj):
-                rp = pd.DataFrame({
-                    "Pasivo/Activo": proj["Pasivo"]["media"] / proj["Activo"]["media"] * 100,
-                    "Patrimonio/Activo": proj["Patrimonio"]["media"] / proj["Activo"]["media"] * 100,
-                })
-                for etq, color in [("Pasivo/Activo", C_PAT), ("Patrimonio/Activo", C_DEP)]:
-                    _add_proy(fig2, etq, color, rp[[etq]].rename(columns={etq: "media"}),
-                              1.0, "%{y:.1f} %<extra></extra>", banda=False)
+            fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f} %<extra></extra>")
             fig2.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
                               spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
                                hovermode="x unified",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
-        if proyectar and not proj:
-            st.caption("No hay suficiente serie para proyectar con los filtros actuales.")
-        elif proyectar:
-            st.caption("La línea punteada es una **proyección** (Holt-Winters, "
-                       "suavizado exponencial) hasta dic-2027; la banda es el "
-                       "intervalo de predicción al 80%. Es una estimación del "
-                       "modelo a partir del histórico, **no un dato oficial**.")
 
         # ── Variaciones (tabla resumen) ─────────────────────────────────────────
         st.markdown("**Variaciones**")
