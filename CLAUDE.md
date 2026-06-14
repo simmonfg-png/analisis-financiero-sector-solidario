@@ -19,7 +19,7 @@ del **sector solidario colombiano**, a partir de los reportes oficiales de la
 
 ## 2. Stack y entorno
 
-- Python 3.12 · Streamlit 1.57.0 · pandas 3.0.3 · plotly 6.7.0 · openpyxl 3.1.5 · pyarrow 24.0.0 · pytest.
+- Python 3.12 · Streamlit 1.57.0 · pandas 3.0.3 · plotly 6.7.0 · openpyxl 3.1.5 · pyarrow 24.0.0 · statsmodels 0.14.6 (proyección Holt-Winters) · pytest.
 - SO de trabajo: **Windows** (PowerShell). Ruta local del proyecto:
   `C:\Users\SIMON\Desktop\PROYECTOS\ANALISIS FINANCIERO SECTOR SOLIDARIO`.
 - Arrancar la app: `streamlit run app.py` (abre en http://localhost:8501).
@@ -171,6 +171,23 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
 ## 10. Bitácora de cambios
 
 > Añadir aquí una entrada por cada cambio relevante (más reciente arriba).
+
+- **2026-06-14** — **Proyección Holt-Winters a dic-2027** en Principales cifras
+  (`views/panorama.py`, TAB 1). Casilla "Proyectar a dic-2027" (default ON) que
+  extiende ambas gráficas con un **tramo punteado** (anclado al último dato real)
+  y, en la de millones, una **banda de predicción al 80%** sombreada por rubro.
+  Modelo: **suavizado exponencial ETS multiplicativo** (error/estacional mult.,
+  tendencia aditiva, `seasonal_periods=4`) vía **statsmodels** (nueva
+  dependencia). Nuevas funciones en analytics: `trimestres_hasta(ultimo, hasta)`
+  y `proyectar_ets(serie, futuros, nivel=0.8)` (devuelve media/inf/sup o None si
+  la serie es corta/no positiva/falla el ajuste). Cacheada en
+  `data.proyeccion_balance` (no depende del slider). La **línea de tiempo**
+  (`select_slider`) se extiende con los trimestres futuros. Los ratios proyectan
+  solo la media (sin banda, porque el cociente no hereda un intervalo limpio).
+  Caption-disclaimer: es estimación del modelo, no dato oficial. Tests 30/30
+  (incluye 3 nuevos). **Decisión del usuario (2026-06-14):** se eligió ML/forecast
+  estadístico (Holt-Winters) sobre redes neuronales —con ~100 puntos mensuales y
+  serie suave, el ML pesado sobreajusta— y proyectar hasta 2027 con banda.
 
 - **2026-06-14** — **Principales cifras: ratios + 2ª gráfica + línea de tiempo**
   (`views/panorama.py`, TAB 1). Se añaden dos métricas más (fila de 5):

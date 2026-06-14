@@ -174,6 +174,53 @@ def variacion_anual(serie: pd.Series) -> float:
     return float((serie.iloc[-1] / serie.iloc[-13] - 1) * 100)
 
 
+def trimestres_hasta(ultimo: str, hasta: str) -> list[str]:
+    """Períodos trimestrales 'YYYY-MM' (MM en 03/06/09/12) posteriores a `ultimo`
+    y hasta `hasta` inclusive. Ej.: ('2026-03', '2027-12') → 7 trimestres."""
+    anio, mes = int(ultimo[:4]), int(ultimo[5:])
+    out = []
+    while True:
+        mes += 3
+        if mes > 12:
+            mes -= 12
+            anio += 1
+        periodo = f"{anio}-{mes:02d}"
+        out.append(periodo)
+        if periodo >= hasta:
+            return out
+
+
+def proyectar_ets(serie: pd.Series, futuros: list[str], periodo_estacional: int = 4,
+                  nivel: float = 0.8) -> "pd.DataFrame | None":
+    """Proyección Holt-Winters (suavizado exponencial ETS) de `serie` para los
+    períodos de `futuros`.
+
+    Modelo multiplicativo (error y estacionalidad mult., tendencia aditiva),
+    apropiado para series financieras positivas de crecimiento ~exponencial.
+    Devuelve un DataFrame indexado por período con columnas `media`/`inf`/`sup`
+    (intervalo de predicción al `nivel` indicado, p. ej. 0.8 = 80%), o `None`
+    si la serie es demasiado corta, tiene no positivos o el ajuste falla.
+    """
+    s = serie.dropna().astype(float)
+    if len(s) < 2 * periodo_estacional + 2 or (s <= 0).any() or not futuros:
+        return None
+    try:
+        from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+        modelo = ETSModel(s.reset_index(drop=True), error="mul", trend="add",
+                          seasonal="mul", seasonal_periods=periodo_estacional)
+        ajuste = modelo.fit(disp=False)
+        n = len(s)
+        pred = ajuste.get_prediction(start=n, end=n + len(futuros) - 1)
+        sf = pred.summary_frame(alpha=1 - nivel)
+    except Exception:
+        return None
+    return pd.DataFrame(
+        {"media": sf["mean"].to_numpy(),
+         "inf": sf["pi_lower"].to_numpy(),
+         "sup": sf["pi_upper"].to_numpy()},
+        index=futuros)
+
+
 CUENTAS_FOTO = [A, P, PAT, CART, DEP, EXC]
 
 # Categorías de CAC por monto de activos (Art. 2.11.13.1.2 del Decreto único).
