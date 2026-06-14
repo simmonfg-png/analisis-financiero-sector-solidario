@@ -706,12 +706,15 @@ def render():
         cob_riesgo = pr / ri * 100 if ri else float("nan")
         # Indicadores de "altura de mora" pendientes: requieren el detalle de
         # cartera por días de vencimiento (raw_cartera), aún no integrado.
+        def _pct2(v):  # porcentaje con dos decimales, coma decimal (es-CO)
+            return "—" if v is None or v != v else f"{v:.2f}%".replace(".", ",")
+
         q = st.columns(3)
-        q[0].metric("Calidad por riesgo", pct(cal_riesgo),
+        q[0].metric("Calidad por riesgo", _pct2(cal_riesgo),
                     help="Cartera en riesgo (categorías B-E) / cartera bruta")
-        q[1].metric("Calidad con castigos", pct(cal_castigos),
+        q[1].metric("Calidad con castigos", _pct2(cal_castigos),
                     help="(Cartera en riesgo + castigos) / (cartera bruta + castigos)")
-        q[2].metric("Cobertura cartera en riesgo", pct(cob_riesgo),
+        q[2].metric("Cobertura cartera en riesgo", _pct2(cob_riesgo),
                     help="Provisiones totales / cartera en riesgo")
 
         v = st.columns(3)
