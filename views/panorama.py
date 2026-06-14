@@ -275,10 +275,13 @@ def render():
             fig = px.line(largo, x="PERIODO", y="VALOR", color="Rubro",
                           color_discrete_sequence=SEQ,
                           labels={"PERIODO": "", "VALOR": "Saldo (millones COP)"})
-            # Gráfica normal: al señalar un punto se muestra el valor de ese mes.
-            fig.update_traces(hovertemplate="%{fullData.name}: %{y:,.0f}<extra></extra>")
+            # Al señalar: línea-guía vertical + un círculo por serie y un tooltip
+            # con la fecha y el valor de cada rubro (hovermode x unified + spikes).
+            fig.update_traces(hovertemplate="%{y:,.0f}<extra></extra>")
+            fig.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
+                             spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
-                              hovermode="closest",
+                              hovermode="x unified",
                               legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig, width="stretch")
         with g2:
@@ -289,9 +292,11 @@ def render():
             fig2 = px.line(largo2, x="PERIODO", y="VALOR", color="Indicador",
                            color_discrete_sequence=[C_PAT, C_DEP],
                            labels={"PERIODO": "", "VALOR": "% del activo"})
-            fig2.update_traces(hovertemplate="%{fullData.name}: %{y:.1f}%<extra></extra>")
+            fig2.update_traces(hovertemplate="%{y:.1f} %<extra></extra>")
+            fig2.update_xaxes(showspikes=True, spikemode="across", spikethickness=1,
+                              spikecolor="#888", spikedash="solid", spikesnap="cursor")
             fig2.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0),
-                               hovermode="closest",
+                               hovermode="x unified",
                                legend=dict(orientation="h", y=-0.18))
             st.plotly_chart(fig2, width="stretch")
 

@@ -182,6 +182,10 @@ La app está **desplegada en el servidor Hetzner del usuario** (Ubuntu 24.04,
   línea-guía/`x unified`: vuelve a **hover normal** (`hovermode="closest"`),
   mostrando el valor del punto señalado. Verificado en navegador (5 métricas,
   slider y ambas trazas correctas).
+  **Ajuste posterior (mismo día):** ambas gráficas adoptan el tooltip enriquecido
+  estilo `analisis_tasas` — `hovermode="x unified"` + spikes en X (línea-guía
+  vertical sólida): al señalar, un círculo de color por serie y un tooltip con
+  la fecha (encabezado) y cada métrica con su color y valor.
 
 - **2026-06-14** — **Principales cifras rediseñada** (`views/panorama.py`, TAB 1).
   Título de la sección → **"Estructura Financiera"** con subheader *"Cifras
