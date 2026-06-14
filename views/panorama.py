@@ -179,6 +179,18 @@ def render():
             help="Tamaño dentro de la categoría. Intermedia: 2 grupos partidos en "
                  "el punto medio (~$323 mM). Básica: 3 grupos por tercios del tope "
                  "(~$39 mM y ~$79 mM). Plena no se subdivide.")
+        # las entidades disponibles dependen de los filtros anteriores
+        base_ent = foto
+        if sel_dep:
+            base_ent = base_ent[base_ent["DEPARTAMENTO"].isin(sel_dep)]
+        if sel_mun:
+            base_ent = base_ent[base_ent["MUNICIPIO"].isin(sel_mun)]
+        if sel_cat:
+            base_ent = base_ent[base_ent["CATEGORIA"].isin(sel_cat)]
+        if sel_sub:
+            base_ent = base_ent[base_ent["SUBCATEGORIA"].isin(sel_sub)]
+        ents = sorted(base_ent["ENTIDAD"].dropna().unique())
+        sel_ent = st.multiselect("Entidad", ents, default=[])
 
     f = foto
     if sel_dep:
@@ -189,6 +201,8 @@ def render():
         f = f[f["CATEGORIA"].isin(sel_cat)]
     if sel_sub:
         f = f[f["SUBCATEGORIA"].isin(sel_sub)]
+    if sel_ent:
+        f = f[f["ENTIDAD"].isin(sel_ent)]
     if f.empty:
         st.info("Ningún resultado con los filtros elegidos.")
         return
