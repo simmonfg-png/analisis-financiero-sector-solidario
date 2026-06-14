@@ -698,8 +698,10 @@ def render():
         st.divider()
         st.subheader("Calidad de Cartera")
 
-        ri = va("CARTERA_EN_RIESGO")
-        pr = va("PROVISIONES_TOTAL")
+        # Cartera en riesgo = capital en categorías B-E (CARTERA_RIESGO_CAPITAL).
+        # Provisiones = individuales sobre capital + generales (sin interés/otros).
+        ri = va("CARTERA_RIESGO_CAPITAL")
+        pr = va("PROVISIONES_INDIVIDUALES_CAPITAL") + va("PROVISIONES_GENERALES")
         cast = va("CASTIGOS")
         cal_riesgo = ri / cb * 100 if cb else float("nan")
         cal_castigos = (ri + cast) / (cb + cast) * 100 if (cb + cast) else float("nan")
@@ -711,21 +713,24 @@ def render():
 
         q = st.columns(3)
         q[0].metric("Calidad por riesgo", _pct2(cal_riesgo),
-                    help="Cartera en riesgo (categorías B-E) / cartera bruta")
+                    help="Cartera en riesgo (capital, categorías B-E) / cartera bruta")
         q[1].metric("Calidad con castigos", _pct2(cal_castigos),
                     help="(Cartera en riesgo + castigos) / (cartera bruta + castigos)")
         q[2].metric("Cobertura cartera en riesgo", _pct2(cob_riesgo),
-                    help="Provisiones totales / cartera en riesgo")
+                    help="Provisiones (individuales capital + generales) / cartera en riesgo")
 
         v = st.columns(3)
         v[0].metric("Cartera en riesgo ($)", _mill(ri),
-                    help="Capital + intereses en categorías B a E")
+                    help="Capital en categorías B a E (CARTERA_RIESGO_CAPITAL)")
         v[1].metric("Provisiones totales ($)", _mill(pr),
-                    help="Provisiones individuales + generales")
+                    help="Provisiones individuales sobre capital + generales")
 
         st.subheader("Calidad y cobertura en el tiempo")
-        calidad = an.ratio_alias(panel, "CARTERA_EN_RIESGO", "CARTERA_BRUTA")
-        cobertura = an.ratio_alias(panel, "PROVISIONES_TOTAL", "CARTERA_EN_RIESGO")
+        calidad = an.ratio_alias(panel, "CARTERA_RIESGO_CAPITAL", "CARTERA_BRUTA")
+        prov_ser = (an.serie_alias(panel, "PROVISIONES_INDIVIDUALES_CAPITAL")
+                    + an.serie_alias(panel, "PROVISIONES_GENERALES"))
+        riesgo_ser = an.serie_alias(panel, "CARTERA_RIESGO_CAPITAL")
+        cobertura = (prov_ser / riesgo_ser * 100).where(riesgo_ser != 0)
         comp = calidad.to_frame("Calidad por riesgo")
         comp["Cobertura por riesgo"] = cobertura
         largo = comp.reset_index().melt(id_vars="PERIODO", var_name="Indicador",
